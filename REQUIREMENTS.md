@@ -84,4 +84,17 @@ Two halves: 6 COUNTS (forecast what removal changes) and 6 WEIGHTS (convert coun
 - **The four unpriced weights**: bind LTV, the freed-review hour, the customer side of a NOC, and the loss join. Each is an owner conversation (finance, UW ops, finance, actuarial), not a query.
 - **The gate**: LaNae's tolerance number is the decision rule input. The machine outputs binds-per-NOC; nobody has asked her what exchange rate she accepts. Until asked, the report prints "tolerance bar: NOT SET".
 - **Selection-effect floor**: the twin never faced the alert, so twin rates are a floor for true un-reviewed 101+ (book averages 117 years; projection 7-11 NOCs per 100). The machine carries this as a labeled scenario. Open: how to price the gap between floor and projection, and whether the A/B test (section 8 of the project doc) should size it directly.
+
+## Estimation methods (how the counts get forecast)
+
+The counterfactual twin is the default estimator, not the only one. Five ways to forecast removal impact, in rising order of strength:
+
+1. **Counterfactual twin** (default). The 91-100 no-alert cohort. Cheap, real, reproducible. Blind to selection effects; younger than the true book (handled by the risk-gradient projection).
+2. **Pre-alert era diff-in-diff.** Same 101+ population before March 2025, differenced against a control cohort across the same eras. Never raw before/after: era effects are large (inspection cancels halved between eras).
+3. **Staggered geography.** Pre-DAMR gating rolled out state by state. Template already exists: the water-automation bind-rate diff-in-diff (censor-safe windows, placebo checks). Caveat: gating states were not chosen at random.
+4. **Boundary comparison.** 99-100 vs 101-102 at the cutoff, plus the 2024 un-gated escapees. Cleanest identification, but local: says nothing about the 117-year average home.
+5. **The 10% canary** (playbook step 7). Randomized removal. The only method that can see the selection effect (who starts submitting once the alert is gone). Measured data replaces every model above.
+
+Rule: never quote a verdict from a single estimator. Twin is the default; era diff-in-diff and the boundary are robustness checks; when all three agree, present the range; the canary arbitrates. (Shadow-mode agreement scoring, playbook step 6, answers a different question: whether the levers duplicate the UW, not what removal costs.)
+
 - **NOE double-count risk**: the v0 hand ledger's +30 counted only the existing book's rate shift; the machine also adds new-bind NOEs (~+9/mo, total ~+40). Confirm with David which convention the Thursday proposal quotes, and label it either way.
