@@ -1,0 +1,78 @@
+{
+  "_comment": "The alert queue: playbook step 2's shopping list. Top alert families by underwriter touches per month (verified census, 2026-08-02 recipe 'UW touches per alert family', Jan-Jun 2026, db 235). Readiness columns say how much of the machine's intake each family already has; 'unknown' means nobody has pulled it yet, not that it does not exist. Approve/reject mixes are from the single-alert cohort table (Study A recipe, Jan-May 2026, quotes whose ONLY alert family was this one).",
+  "as_of": "2026-08-19",
+  "queue": [
+    {
+      "alert_family": "dwelling age",
+      "uw_touches_per_month": 5044,
+      "comparison_group": "yes: the 91-100 sister cohort, plus pre-alert era and boundary slices",
+      "uw_action_mix": "known: 46.5% nothing / 25.3% roof exclusion / 28.2% data fixes / 8.4% of asked rejected",
+      "post_bind_outcomes": "known: 4.52 NOC and 3.86 fixes per 100 bound 90d reviewed, 6.46 / 7.52 on the twin, reason codes pulled",
+      "levers": "roof dial (live, needs re-aiming), pre-fill sourcing (trial running), attestations (not started)",
+      "status": "weighed (config #1); weights still unpriced"
+    },
+    {
+      "alert_family": "excessive claims (water, theft, fire, liability)",
+      "uw_touches_per_month": 1692,
+      "comparison_group": "partial: launch-states vs control comparison exists for water; no sister cohort cut yet",
+      "uw_action_mix": "partial: water-only referrals approve 87.1% / reject 3.2%; full action detail not pulled",
+      "post_bind_outcomes": "not yet readable for automated binds (first honest read ~mid Oct 2026)",
+      "levers": "water automation live (the backtest config), theft live Aug 4, fire and liability not built",
+      "status": "backtest (config #2): scores whether automation duplicated the UW"
+    },
+    {
+      "alert_family": "roof condition",
+      "uw_touches_per_month": 1156,
+      "comparison_group": "unknown",
+      "uw_action_mix": "partial: approve 77.0% / reject 8.0% on single-alert quotes; action detail not pulled",
+      "post_bind_outcomes": "unknown",
+      "levers": "the roof score model exists (same dial as dwelling age)",
+      "status": "good candidate for config #3: the lever already exists"
+    },
+    {
+      "alert_family": "Coverage A threshold",
+      "uw_touches_per_month": 1094,
+      "comparison_group": "unknown",
+      "uw_action_mix": "partial: approve 63.2% / reject 16.3%, the highest reject rate of the majors; this gate may be doing real work",
+      "post_bind_outcomes": "unknown",
+      "levers": "unknown",
+      "status": "weigh carefully: high reject rate means removal is likely expensive"
+    },
+    {
+      "alert_family": "open claims",
+      "uw_touches_per_month": 820,
+      "comparison_group": "unknown",
+      "uw_action_mix": "partial: approve 67.4% / general response 21.1% / reject 11.1% on the decided cohort",
+      "post_bind_outcomes": "unknown",
+      "levers": "claim-matching cleanup explored (many flagged claims are not the applicant's); no automation built",
+      "status": "not weighed"
+    },
+    {
+      "alert_family": "duplicates / declines",
+      "uw_touches_per_month": 772,
+      "comparison_group": "unknown",
+      "uw_action_mix": "partial: approve 76.8% / reject 9.2% on single-alert quotes",
+      "post_bind_outcomes": "unknown",
+      "levers": "unknown",
+      "status": "not weighed"
+    },
+    {
+      "alert_family": "occupancy",
+      "uw_touches_per_month": 575,
+      "comparison_group": "unknown",
+      "uw_action_mix": "partial: approve 67.5% / reject 12.7% on single-alert quotes",
+      "post_bind_outcomes": "unknown",
+      "levers": "unknown",
+      "status": "not weighed"
+    },
+    {
+      "alert_family": "VELMA high risk",
+      "uw_touches_per_month": 220,
+      "comparison_group": "unknown",
+      "uw_action_mix": "partial: approve 81.2% / reject 4.6% at a 45.1% referral rate; a generic 'needs review' flag",
+      "post_bind_outcomes": "unknown",
+      "levers": "none needed if the flag carries no signal; removal was already proposed once",
+      "status": "possible cheapest first kill: low volume, high approve rate, little apparent judgment"
+    }
+  ]
+}

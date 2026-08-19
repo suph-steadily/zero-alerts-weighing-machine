@@ -1,0 +1,117 @@
+{
+  "_comment": "Backtest config: the excessive-water-claims automation, live Jul 15 2026 (20% cohort, 26 states). This case already ran playbook steps 5-6 (build the automation, prove it with the alert still on), so it is the machine's proof that the scorecard idea works on a case we lived through. It is an automation-WITHOUT-removal case: the alert still fires and still gates. Sources: MB 131090 (baseline), MB 121562 / 121685 (funnel), bind-rate study wf_f2c194d3 (artifact 3f60f61a), consult-the-book data-recipes.md 'No-touch rate + alert census' and 'Water automation bind-rate impact'.",
+
+  "alert": {
+    "id": "EXCESSIVE_CLAIMS_WATER",
+    "name": "Excessive water claims automation (backtest)",
+    "direction": "automate",
+    "mode": "backtest",
+    "as_of": "2026-08-19",
+    "description": "The water-claims alert fires ~2,360 times a month by design and kept firing after automation; the system resolves the claims question itself so most quotes never need the underwriter. Live Jul 15 2026 for a 20% slice in 26 states.",
+    "notes": [
+      "Quotes with an un-overridden water alert NEVER bind (zero ever, any period). Comparing automated vs not-automated quotes on bind rate is pure selection; only the launch-states vs control-states comparison is valid.",
+      "Automation rate at launch: 231 available, 196 automated (84.8%), 120 needed no UW review at all; of the 76 still reviewed, 74 were caused by a separate non-water alert.",
+      "This case shows the growth thesis from the other side: automation alone moved friction (referrals, speed) but NOT binds. Binds move when the gate itself comes off, which water's automation deliberately did not do."
+    ]
+  },
+
+  "estimator": {
+    "method": "state_rollout",
+    "comparison": "the 26 launch states against all other states, before vs after Jul 15 2026, bind windows cut so late-arriving quotes cannot skew either side, with placebo checks on non-water quotes",
+    "notes": "Launch states ran hot going into launch (8% to 17% weekly referral swing), so reads carry that caution. Detectable bind effect is +-5pp until ~early Sep 2026."
+  },
+
+  "backtest": {
+    "claims": [
+      {
+        "key": "referral_rate",
+        "label": "Referral rate on water-only quotes",
+        "expectation": "If the system does the underwriter's water job, agents stop needing the referral and the rate falls hard.",
+        "baseline": {
+          "point": 36.5,
+          "unit": "% of water-only quotes referred (launch states, pre)",
+          "status": "measured",
+          "source": "wf_f2c194d3 bind-rate study, launch states pre-launch. The Jan-May all-states baseline definition is 40.6% (MB 131090).",
+          "recipe": "db 268: cohort from dbt_upc.uw_alerts_per_quote (alert_id='EXCESSIVE_CLAIMS_WATER', NB, water-only), referrals from eventstore."
+        },
+        "actual": {
+          "point": 11.9,
+          "unit": "% of water-only quotes referred (launch states, post)",
+          "status": "measured",
+          "confidence": "high",
+          "source": "wf_f2c194d3: 36.5% to 11.9% in launch states while control stayed flat; the gap is far outside noise.",
+          "recipe": "same cohort recipe, post-Jul-15 window."
+        },
+        "verdict": "held",
+        "read": "The system is doing the underwriter's water job: referrals fell by two thirds where it launched and stayed flat where it did not."
+      },
+      {
+        "key": "bind_rate",
+        "label": "Bind rate on water-only quotes",
+        "expectation": "Automation alone should NOT add binds. The alert still fires and still gates; growth comes only when the gate itself comes off.",
+        "actual": {
+          "point": 0.0,
+          "low": -3.6,
+          "high": 1.0,
+          "unit": "pp change in bind rate, launch vs control",
+          "status": "measured",
+          "confidence": "medium",
+          "source": "wf_f2c194d3: 7-day read -2.3pp +-5.4, 14-day read +0.2 to +1.0pp; flat within noise. +-5pp detectable ~early Sep 2026.",
+          "recipe": "db 268 launch-vs-control comparison, censor-safe bind windows (data-recipes.md, 'Water automation bind-rate impact')."
+        },
+        "verdict": "held",
+        "read": "Flat, as the thesis says it should be: automation defends, removal unlocks. Water kept its gate, so it bought speed and fewer referrals, not binds."
+      },
+      {
+        "key": "alert_firing",
+        "label": "Alert firing volume",
+        "expectation": "Firing stays flat by design. Alert counts are the wrong scoreboard; underwriter interventions are the right one.",
+        "actual": {
+          "point": 2360,
+          "unit": "alert firings per month",
+          "status": "measured",
+          "confidence": "high",
+          "source": "Alert census: ~2.36k/mo, flat through launch (data-recipes.md, water automation KPI).",
+          "recipe": "db 235: dbt.ipod_smga_uw_alerts_per_quote_version, water family, monthly quote-level count."
+        },
+        "verdict": "held",
+        "read": "Flat as designed. Anyone reading alert counts as the KPI would call the launch a failure; the referral line says the opposite."
+      },
+      {
+        "key": "time_to_bind",
+        "label": "Median time to bind, water-only quotes",
+        "expectation": "Killing the wait shows up as speed even when it does not show up as binds.",
+        "baseline": {
+          "point": 44,
+          "unit": "hours, median time-to-bind (pre)",
+          "status": "measured",
+          "source": "wf_f2c194d3."
+        },
+        "actual": {
+          "point": 24,
+          "unit": "hours, median time-to-bind (post)",
+          "status": "measured",
+          "confidence": "high",
+          "source": "wf_f2c194d3: 44h to 24h; same-day binds went from 37% to 56% of bound.",
+          "recipe": "db 268: min(pol_created)/min(quote_issued) per quote."
+        },
+        "verdict": "held",
+        "read": "The friction cost was real: same policies, bound in about half the time."
+      },
+      {
+        "key": "post_bind_outcomes",
+        "label": "NOC and fix rates on automated binds vs UW-reviewed binds",
+        "expectation": "If the duplication is faithful, automated binds should draw NOCs and coverage fixes at the same rate the UW-reviewed ones do.",
+        "actual": {
+          "status": "unpriced",
+          "unit": "NOCs and UW corrective endorsements per 100 bound, 90 days",
+          "confidence": "none",
+          "source": "NEEDED, not yet readable: launch was Jul 15 and NOCs need ~90 days after bind to show up. First honest read ~mid Oct 2026.",
+          "recipe": "db 235: rebuild the post-bind census recipe (dbt_dev.damr_uarnoe_* pattern) on the water cohort, automated vs UW-reviewed, once the window closes."
+        },
+        "verdict": "pending",
+        "read": "This is the claim that matters most for the dwelling-age plan, and it is the one the calendar has not released yet."
+      }
+    ]
+  }
+}

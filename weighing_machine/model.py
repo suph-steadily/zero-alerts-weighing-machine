@@ -72,6 +72,9 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
     binds-per-NOC exchange rate, once she has been asked."""
     if scale <= 0:
         raise ValueError("scale must be positive")
+    if cfg.mode != "weigh":
+        raise ValueError("weigh() takes a weigh-mode config; "
+                         "use backtest.score() for mode 'backtest'")
 
     # Volume inputs (scale applies).
     B0 = cfg.count("current_binds_per_month").scaled(scale)
@@ -253,6 +256,11 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
         "policies of this cohort, inspection-lane NOCs, first 90 days. "
         "Darren's 11.7% is every UW NOC, book-wide. Never mix them.")
     caveats.append(
+        "Counts estimated via %s. Never compare this ledger against one "
+        "built on a different estimation method without saying so; the "
+        "methods have different blind spots (REQUIREMENTS.md, Estimation "
+        "methods)." % cfg.estimator_label)
+    caveats.append(
         "Ranges are worst-case interval propagation, so they are wider than "
         "any single hand-computed bracket; a hand range should sit inside "
         "the machine's range.")
@@ -265,7 +273,9 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
     ledger = Ledger(
         alert_id=cfg.alert_id, alert_name=cfg.name, direction=cfg.direction,
         as_of=cfg.as_of, scale=scale, lines=lines, sensitivities=sens,
-        caveats=caveats, bind_to_noc_ratio=ratio, tolerance_bar=tolerance_bar)
+        caveats=caveats, bind_to_noc_ratio=ratio, tolerance_bar=tolerance_bar,
+        estimator_label=cfg.estimator_label,
+        comparison=cfg.estimator.get("comparison", ""))
 
     # Direction "add": a proposed new alert is the mirror image, so every
     # delta flips sign (adding the gate loses the binds, saves the NOCs,

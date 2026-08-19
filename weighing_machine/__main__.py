@@ -11,7 +11,8 @@ import argparse
 import json
 import sys
 
-from .config import load
+from .backtest import score
+from .config import MODE_BACKTEST, load
 from .model import weigh
 from .report import render_html
 
@@ -34,6 +35,23 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
 
     cfg = load(args.config)
+
+    if cfg.mode == MODE_BACKTEST:
+        card = score(cfg)
+        print(card.to_text())
+        if args.as_json:
+            payload = {
+                "alert_id": card.alert_id, "mode": "backtest",
+                "held": card.held, "missed": card.missed,
+                "pending": card.pending,
+                "claims": {c.key: c.verdict for c in card.claims},
+            }
+            print(json.dumps(payload, indent=2))
+        if args.out:
+            print("(-o ignored: HTML reports exist for weigh mode only; "
+                  "the scorecard is the text above)", file=sys.stderr)
+        return 0
+
     ledger = weigh(cfg, scale=args.scale, tolerance_bar=args.tolerance_bar)
 
     print(ledger.to_text())

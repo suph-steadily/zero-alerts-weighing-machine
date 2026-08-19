@@ -71,6 +71,10 @@ class Ledger:
     # compares this against the tolerance bar once one exists.
     bind_to_noc_ratio: Optional[Quantity] = None
     tolerance_bar: Optional[float] = None   # LaNae's number; None = never asked
+    # which estimation method produced the counts, and against what comparison
+    # population; printed so ledgers from different methods are never mixed up.
+    estimator_label: str = ""
+    comparison: str = ""
 
     # ------------------------------------------------------------- helpers
     def line(self, key: str) -> LedgerLine:
@@ -96,6 +100,10 @@ class Ledger:
         out.append("Alert: %s (%s)" % (self.alert_name, self.alert_id))
         out.append("Direction: %s | scale: %.2f | as of %s"
                    % (self.direction, self.scale, self.as_of))
+        if self.estimator_label:
+            out.append("Counts estimated via: %s" % self.estimator_label)
+        if self.comparison:
+            out.append("Comparison: %s" % self.comparison)
         out.append("")
         out.append("COUNTS, per month at this scale")
         for ln in self.counts():

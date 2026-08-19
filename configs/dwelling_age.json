@@ -13,6 +13,12 @@
     ]
   },
 
+  "estimator": {
+    "method": "sister_cohort",
+    "comparison": "the 91-100 year old homes that never had the alert (the just-under twin), layered onto the 101+ funnel; risk gradient projection keeps the age gap honest (+22.8%/decade)",
+    "notes": "Default method. Blind to who would start submitting once the alert is gone, so every cost line is a floor. Robustness checks when it matters: pre-alert era and the boundary slice (REQUIREMENTS.md, Estimation methods)."
+  },
+
   "counts": {
     "forced_reviews_per_month": {
       "point": 2200,
