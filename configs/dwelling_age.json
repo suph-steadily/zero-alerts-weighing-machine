@@ -1,0 +1,196 @@
+{
+  "_comment": "Weighing machine v0 worked example: the dwelling-age 101+ manual-review alert, priced for removal. Every value carries source + confidence + range. Sources: Zero Alerts README (alert-north-star/README.md), What Must Be True v4 (appendix/what-must-be-true.html), ~/mockups/damr-postbind-uarnoe/{ANALYSIS,DEEPDIVE}-2026-08-16.md, Two Houses artifact 443f560b, scratch-darren 2026-08-noc-impact-inde-agent. Recipes: consult-the-book data-recipes.md, Metabase db 235.",
+
+  "alert": {
+    "id": "DWELLING_AGE_101_PLUS",
+    "name": "Dwelling age 101+ manual review",
+    "direction": "remove",
+    "as_of": "2026-08-19",
+    "description": "Homes over 100 years old cannot bind until an underwriter reviews them. First and most common blocking alert. Per 100 age-alert-only quotes, ~63 die with nobody ever looking and ~16 bind.",
+    "notes": [
+      "Cohort layering assumes the same population applies after removal; alerts also deter bad risks, so every cost line here is a floor, not an estimate (Zero Alerts README s7).",
+      "Published v0 ledger this config must reproduce: What Must Be True v4 s2 and Zero Alerts README s4."
+    ]
+  },
+
+  "counts": {
+    "forced_reviews_per_month": {
+      "point": 2200,
+      "unit": "reviews/mo",
+      "status": "measured",
+      "confidence": "high",
+      "source": "What Must Be True v4 s1 / Zero Alerts README s4: ~2,200 forced UW reviews per month eliminated by removal.",
+      "recipe": "db 235: eventstore underwriting_review_note submissions joined to dbt.ipod_smga_uw_alerts_per_quote_version at the submitted (quote_id, quote_version), age-family tagged (data-recipes.md, 'UW touches per alert family')."
+    },
+    "current_binds_per_month": {
+      "point": 850, "low": 800, "high": 900,
+      "unit": "bound policies/mo",
+      "status": "measured",
+      "confidence": "medium",
+      "source": "ANALYSIS-2026-08-16.md (~/mockups/damr-postbind-uarnoe): 'the current ~850 DAMR-only binds/mo'. Range is a +-50 hand bracket.",
+      "recipe": "db 235: dbt.ipod_standard_mga_raw_policy_info, DAMR-only NB cohort, quote_issued_timestamp not null (data-recipes.md, 'DAMR control groups')."
+    },
+    "binds_gained_per_month": {
+      "point": 115, "low": 50, "high": 175,
+      "unit": "bound policies/mo",
+      "status": "measured",
+      "confidence": "medium",
+      "source": "Zero Alerts README s4 / Two Houses (artifact 443f560b): 91-100 twin layered onto the 101+ funnel. Pinned, not derived: v0's counting half already ran by hand. Top-7-states cut = +107.",
+      "recipe": "db 235 funnel-twin recipe (data-recipes.md 2026-08-13): DAMR-only 101+ bind 15.1% vs just-under 0-alert 14.4% vs under-91 0-alert 18.0%, Jan-May 2026."
+    },
+    "reviewed_noc_per_100_bound_90d": {
+      "point": 4.52, "low": 3.91, "high": 5.19,
+      "unit": "NOCs per 100 bound",
+      "denominator": "per 100 bound policies of the reviewed 101+ (DAMR) cohort, inspection-lane NOCs, first 90 days after bind",
+      "status": "measured",
+      "confidence": "high",
+      "source": "Zero Alerts README s6b: 192 NOCs / 4,244 bound. Range = Byar approximate 95% CI on the count.",
+      "recipe": "db 235 snapshots dbt_dev.damr_uarnoe_*_20260816, MB cards 142904-142907 (collection 6787); cancellation rows with cancellation_reason='Inspection' (data-recipes.md, 'Post-bind UAR/NOE census')."
+    },
+    "twin_noc_per_100_bound_90d": {
+      "point": 6.46, "low": 5.11, "high": 7.96,
+      "unit": "NOCs per 100 bound",
+      "denominator": "per 100 bound policies of the un-reviewed 91-100 just-under twin, inspection-lane NOCs, first 90 days after bind",
+      "status": "measured",
+      "confidence": "high",
+      "source": "Zero Alerts README s6b: 79 NOCs / 1,223 bound. Range = Byar approximate 95% CI. This is a FLOOR for true un-reviewed 101+ (see unreviewed_noc_projection_per_100).",
+      "recipe": "same snapshot tables as reviewed_noc_per_100_bound_90d."
+    },
+    "unreviewed_noc_projection_per_100": {
+      "point": 9.0, "low": 7.0, "high": 11.0,
+      "unit": "NOCs per 100 bound",
+      "denominator": "per 100 bound policies, projected true un-reviewed 101+ book, inspection-lane NOCs, 90 days",
+      "status": "partial",
+      "confidence": "low",
+      "source": "Two Houses artifact 443f560b s2: NOC ramps +22.8%/decade of dwelling age; the 101+ book averages 117 years, 16 past the twin; trend projection 7-11 per 100. Scenario input, not the headline.",
+      "recipe": "db 235 age-gradient re-band of dbt_dev.damr_uarnoe_{cohort,final}_20260816 (data-recipes.md, 'No-alert age gradient'); Poisson log-linear slope +22.8%/decade [19.9-25.7]."
+    },
+    "reviewed_noe_per_100_bound_90d": {
+      "point": 3.86, "low": 3.30, "high": 4.48,
+      "unit": "UW corrective NOEs per 100 bound",
+      "denominator": "per 100 bound policies of the reviewed 101+ (DAMR) cohort, UW-initiated corrective endorsements, first 90 days",
+      "status": "measured",
+      "confidence": "high",
+      "source": "Zero Alerts README s6b / ANALYSIS-2026-08-16.md: 164 / 4,244 bound. Range = Byar approximate 95% CI.",
+      "recipe": "db 235: f_ev_class IN ('attribute_correction','exclusion_change') AND f_actor_class='uw' on dbt_dev.damr_uarnoe_final_20260816 (data-recipes.md)."
+    },
+    "twin_noe_per_100_bound_90d": {
+      "point": 7.52, "low": 6.06, "high": 9.13,
+      "unit": "UW corrective NOEs per 100 bound",
+      "denominator": "per 100 bound policies of the un-reviewed 91-100 twin, UW-initiated corrective endorsements, first 90 days",
+      "status": "measured",
+      "confidence": "high",
+      "source": "Zero Alerts README s6b / ANALYSIS-2026-08-16.md: 92 / 1,223 bound (1.95x the reviewed book). Range = Byar approximate 95% CI.",
+      "recipe": "same snapshot tables as reviewed_noe_per_100_bound_90d."
+    },
+    "foregone_uw_correction_premium_per_100_bound_usd": {
+      "point": 3034,
+      "unit": "USD per 100 bound policies",
+      "denominator": "per 100 bound policies, bound-only premium added by UW six-field corrections, never recovered at renewal",
+      "status": "measured",
+      "confidence": "high",
+      "source": "DEEPDIVE-2026-08-16.md cents correction: bound-only $154,542 over the cohort window -> $3,034 per 100 bound. Deliberately bound-only (the larger all-approved figure mostly never binds). UW fixes raise price 3.4x more often than they lower it.",
+      "recipe": "db 235: dbt_dev.damr_prem_flags_20260807 (values are in CENTS, the classic trap) joined to bind outcomes (data-recipes.md, 'Premium join')."
+    }
+  },
+
+  "weights": {
+    "bind": {
+      "year1_premium_usd": {
+        "status": "unpriced",
+        "unit": "USD per bind, year one",
+        "confidence": "none",
+        "sensitivity": [1000, 1500, 2000, 2500],
+        "source": "UNPRICED. What Must Be True v4: bind weight = year-one premium only so far; LTV (retention, compounding GWP, segment loss cost) is the finance/actuarial ask. The grid is an illustrative placeholder, replace with finance's number."
+      }
+    },
+    "noc": {
+      "cure_rate": {
+        "point": 0.74,
+        "unit": "share of NOCs that cure",
+        "status": "measured",
+        "confidence": "medium",
+        "source": "scratch-darren 2026-08-noc-impact-inde-agent REPORT.md (Aug 18): 74% of NOCs cure.",
+        "recipe": "scratch-darren repo, tradeoff.py inputs."
+      },
+      "cured_agent_book_loss_pct": {
+        "point": 1.0, "low": 0.0, "high": 2.0,
+        "unit": "% of that agent's next-year binds, per cured NOC",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "scratch-darren curves: a cured NOC costs roughly 0 to -2% of that agent's next-year binds per event. Point = midpoint of the published band."
+      },
+      "uncured_agent_book_loss_pct": {
+        "point": 20.0,
+        "unit": "% of that agent's next-year binds, front-loaded on the first cancellation",
+        "status": "partial",
+        "confidence": "low",
+        "source": "Darren's early data (LaNae 8/18 meeting + scratch-darren): first NOC that proceeds to cancellation ~ -20% future buys, front-loaded, hardest on small books; 3 NOCs = agent lost. Early data points, not published figures. v0 treats it as level per event, which overstates for multi-NOC agents."
+      },
+      "agent_next_year_binds": {
+        "status": "unpriced",
+        "unit": "binds per agent per year",
+        "confidence": "none",
+        "sensitivity": [5, 15, 40],
+        "sensitivity_labels": [
+          "small book, 5 binds/yr",
+          "median-ish book, 15 binds/yr",
+          "large book, 40 binds/yr"
+        ],
+        "source": "UNPRICED. Needed to convert the per-NOC %-of-book loss into binds. Pull the real distribution of binds per producing agent before trusting any row; grid is illustrative."
+      },
+      "customer_side_usd": {
+        "status": "unpriced",
+        "unit": "USD per NOC, customer side",
+        "confidence": "none",
+        "source": "UNPRICED. Refunded premium + sunk acquisition cost per cancelled policy (What Must Be True v4: 'still unpriced: the customer side')."
+      }
+    },
+    "noe": {
+      "customer_premium_relief_usd": {
+        "point": 0,
+        "unit": "USD premium relief per NOE",
+        "status": "measured",
+        "confidence": "high",
+        "source": "ANALYSIS-2026-08-16.md: UW corrective NOEs are premium-neutral, ~$0 relief to the customer; DEEPDIVE catch-count: coverage carved with <$10 relief on 6.8% of unreviewed vs 3.3% reviewed policies."
+      },
+      "experience_cost_usd": {
+        "status": "unpriced",
+        "unit": "USD per NOE, experience side",
+        "confidence": "none",
+        "sensitivity": [0, 25, 100],
+        "source": "UNPRICED. The removed-coverage / bait-and-switch side (LaNae 8/18: NOC and NOE sit in the same category; the deal changed after close). Grid is illustrative."
+      }
+    },
+    "review": {
+      "labor_usd_per_review": {
+        "point": 6.0, "low": 4.5, "high": 7.5,
+        "unit": "USD per forced review",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "UW expense model anchors: UW labor $1.50/quote and $6.82/bound. Our derivation, flagged as an assumption: $1.50 x ~64.4k NB quotes/mo ~= $97k/mo and $6.82 x ~10.5k bound/mo ~= $72k/mo bracket the labor pool; divided by ~16.3k referral reviews/mo -> $4.4-5.9 per review; band widened to $4.5-7.5. The pool-to-review division is ours, not the expense model's.",
+        "recipe": "volumes: data-recipes.md 'Verified volumes' (NB 64.4k created / 10.5k bound / 16,269 referral submissions per month)."
+      }
+    },
+    "loss": {
+      "loss_join_usd": {
+        "status": "unpriced",
+        "unit": "USD per month, loss impact",
+        "confidence": "none",
+        "source": "MISSING ENTIRELY. No method ties an alert to realized losses; loss ratio lands ~1 year later. Plan (What Must Be True v4 s5): actuarial backtest of the twin's on-book losses against the reviewed 101+ book. The deepest price tag."
+      }
+    }
+  },
+
+  "validation": {
+    "_comment": "The published v0 ledger (What Must Be True v4 s2 / Zero Alerts README s4). tests/test_dwelling_age_v0.py asserts the machine reproduces it within tolerance. Note on NOEs: the hand ledger's +30 counted only the existing book's rate shift (850 x 3.66/100 ~= 31); the machine also reports the coherent total including new-bind NOEs (~+40).",
+    "published_v0_ledger": {
+      "binds_per_month": {"point": 115, "low": 50, "high": 175},
+      "nocs_per_month": {"point": 25, "low": 10, "high": 40},
+      "noes_per_month_book_shift_only": {"point": 30},
+      "forced_reviews_per_month": {"point": -2200},
+      "uw_correction_premium_usd_per_month": {"point": -26000},
+      "loss_impact": "unknown"
+    }
+  }
+}

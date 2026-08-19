@@ -157,15 +157,16 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
         LedgerLine(
             key="noc_agent_attrition", label="NOC cost, agent attrition",
             kind=DOLLARS, good_when="down",
-            quantity=d_noc.mul(noc_pct).mul(agent_binds).mul(bind_w),  # UNPRICED
-            notes="per NOC: %s of the issuing agent's next-year binds "
+            # % -> fraction via scaled(0.01); UNPRICED inputs keep it UNPRICED
+            quantity=d_noc.mul(noc_pct).scaled(0.01)
+                          .mul(agent_binds).mul(bind_w).negate(),
+            notes="per NOC: %s%% of the issuing agent's next-year binds "
                   "(cure split). Dollars need agent book size AND bind "
                   "weight; see sensitivity." % noc_pct.fmt(1)),
         LedgerLine(
             key="noe_cost", label="NOE cost, customer side", kind=DOLLARS,
             good_when="down",
-            quantity=d_noe.mul(noe_exp) if not noe_exp.is_priced
-            else d_noe.mul(noe_exp).negate(),
+            quantity=d_noe.mul(noe_exp).negate(),   # UNPRICED until exp is priced
             notes="premium side measured at ~$%d relief per event; the "
                   "removed-coverage / bait-and-switch side is the unpriced "
                   "half" % (noe_relief.point or 0)),
@@ -175,6 +176,23 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
             notes="the line that decides it; lands ~1 year later. Plan: "
                   "actuarial backtest of the twin's on-book losses."),
     ]
+
+    # Priced subtotal: only the dollar lines that actually carry a price.
+    # Never the verdict while anything above is UNPRICED; the caveat says so.
+    priced = [ln.quantity for ln in lines
+              if ln.kind == DOLLARS and ln.quantity.is_priced]
+    if priced:
+        subtotal = priced[0]
+        for q in priced[1:]:
+            subtotal = subtotal.add(q)
+        n_unpriced = sum(1 for ln in lines
+                         if ln.kind == DOLLARS and not ln.quantity.is_priced)
+        lines.append(LedgerLine(
+            key="priced_subtotal",
+            label="Priced subtotal (%d dollar lines still unpriced)" % n_unpriced,
+            kind=DOLLARS, good_when="up", quantity=subtotal,
+            notes="sum of the priced dollar lines only. NOT the verdict: the "
+                  "biggest lines (binds, NOC attrition, loss) are unpriced."))
 
     # ---- exchange rate ---------------------------------------------------
     ratio = None
