@@ -17,6 +17,14 @@ THE SCHEMA, in one place. A config is one alert, and it works for ANY alert:
               whatever that group is: sister cohort, pre-alert era, rollout
               control states, boundary slice, or the 10% test slice.
   weights:    (weigh mode) the price tags: bind, noc, noe, review, loss.
+              weights.noc must also carry cure_price_basis ("book" or
+              "panel"): which published cured-NOC price the cured value
+              represents. Name your cure price like you name your
+              denominator. Optional weight noe.agent_book_loss_pct (the v8
+              agent-side NOE price) adds the NOE-attrition line.
+              alert.tolerance_bar (optional, binds per NOC) is the accepted
+              exchange rate once the owner names one; the ledger then prints
+              PASS/FAIL instead of "NOT SET".
   backtest:   (backtest mode) claims list: what faithful duplication
               predicted, what actually happened, verdict held/missed/pending.
   validation: optional published targets a test can pin against.
@@ -48,6 +56,28 @@ REQUIRED_COUNTS = [
 ]
 
 REQUIRED_WEIGHT_GROUPS = ["bind", "noc", "noe", "review", "loss"]
+
+# Keys each weight group must carry (weigh mode). Missing keys fail at load
+# time with a plain message, never as a raw KeyError inside the model.
+REQUIRED_WEIGHT_KEYS = {
+    "bind": ["year1_premium_usd"],
+    "noc": ["cure_rate", "cured_agent_book_loss_pct",
+            "uncured_agent_book_loss_pct", "agent_next_year_binds"],
+    "noe": ["experience_cost_usd", "customer_premium_relief_usd"],
+    "review": ["labor_usd_per_review"],
+    "loss": ["loss_join_usd"],
+}
+
+# Two cured-NOC prices are in circulation (scratch-darren v8 REPORT.md and
+# tradeoff.py's cured_price switch): "book" = the book-level scare curve
+# (~0, undetectable), "panel" = the within-agent per-event price (~-2.1% of
+# next-12m binds per cured NOC). A config must NAME which basis its
+# cured_agent_book_loss_pct value represents, the same way a rate names its
+# denominator; quoting one basis against the other is how a room gets lost.
+NOC_CURE_PRICE_BASES = ("book", "panel")
+
+# Weight-group keys that are settings, not Quantities.
+_NON_QUANTITY_WEIGHT_KEYS = {"cure_price_basis"}
 
 # The two things a config can be.
 MODE_WEIGH = "weigh"          # price an alert for removal (or adding)
@@ -90,6 +120,11 @@ class AlertConfig:
     as_of: str
     mode: str = MODE_WEIGH
     estimator: dict = field(default_factory=dict)   # method + comparison
+    # Which cured-NOC price the noc weights use: "book" or "panel".
+    noc_cure_price_basis: str = ""
+    # The accepted binds-per-NOC exchange rate, once the owner names one.
+    # None = never asked; the CLI flag overrides this.
+    tolerance_bar: Optional[float] = None
     description: str = ""
     notes: List[str] = field(default_factory=list)
     counts: Dict[str, Quantity] = field(default_factory=dict)
@@ -117,6 +152,10 @@ class AlertConfig:
 def _quantities(block: dict, prefix: str) -> Dict[str, Quantity]:
     out = {}
     for key, val in block.items():
+        if key.startswith("_"):
+            continue     # _comment and friends are allowed anywhere
+        if key in _NON_QUANTITY_WEIGHT_KEYS:
+            continue     # settings handled by the loader, not Quantities
         if isinstance(val, dict):
             out[key] = Quantity.from_json(val, key="%s.%s" % (prefix, key))
         else:
@@ -198,16 +237,47 @@ def load(path: str) -> AlertConfig:
     weights: Dict[str, Dict[str, Quantity]] = {}
     backtest_claims: List[BacktestClaim] = []
 
+    cure_price_basis = ""
+    tolerance_bar = None
     if mode == MODE_WEIGH:
         counts = _quantities(raw.get("counts", {}), "counts")
         missing = [k for k in REQUIRED_COUNTS if k not in counts]
         if missing:
             raise ValueError("config missing counts: %s" % ", ".join(missing))
         for group, block in raw.get("weights", {}).items():
+            if group.startswith("_"):
+                continue
             weights[group] = _quantities(block, "weights.%s" % group)
         missing = [g for g in REQUIRED_WEIGHT_GROUPS if g not in weights]
         if missing:
             raise ValueError("config missing weight groups: %s" % ", ".join(missing))
+        missing_keys = ["%s.%s" % (g, k)
+                        for g in REQUIRED_WEIGHT_GROUPS
+                        for k in REQUIRED_WEIGHT_KEYS[g]
+                        if k not in weights[g]]
+        if missing_keys:
+            raise ValueError("config missing weight keys: %s"
+                             % ", ".join(missing_keys))
+        if not weights["noc"]["cure_rate"].is_priced:
+            raise ValueError(
+                "weights.noc.cure_rate must be priced: the cure split cannot "
+                "run on an unpriced cure rate (74% is the measured book-wide "
+                "figure, scratch-darren v8)")
+        # Name your cure price, the same way you name your NOC denominator.
+        cure_price_basis = raw.get("weights", {}).get("noc", {}).get("cure_price_basis")
+        if cure_price_basis not in NOC_CURE_PRICE_BASES:
+            raise ValueError(
+                "weights.noc.cure_price_basis must be one of %s: two cured-NOC "
+                "prices are in circulation (book-level ~0, within-agent panel "
+                "~-2.1%%/event; scratch-darren v8 tradeoff.py), so the config "
+                "must say which one cured_agent_book_loss_pct represents"
+                % (NOC_CURE_PRICE_BASES,))
+        tolerance_bar = alert.get("tolerance_bar")
+        if tolerance_bar is not None:
+            if not isinstance(tolerance_bar, (int, float)) or tolerance_bar <= 0:
+                raise ValueError("alert.tolerance_bar must be a positive number "
+                                 "(binds per NOC), got %r" % (tolerance_bar,))
+            tolerance_bar = float(tolerance_bar)
     else:
         backtest_claims = _load_backtest_claims(raw)
 
@@ -218,6 +288,8 @@ def load(path: str) -> AlertConfig:
         as_of=alert["as_of"],
         mode=mode,
         estimator=estimator,
+        noc_cure_price_basis=cure_price_basis,
+        tolerance_bar=tolerance_bar,
         description=alert.get("description", ""),
         notes=alert.get("notes", []),
         counts=counts,

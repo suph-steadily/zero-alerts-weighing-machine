@@ -5,7 +5,7 @@
     "id": "DWELLING_AGE_101_PLUS",
     "name": "Dwelling age 101+ manual review",
     "direction": "remove",
-    "as_of": "2026-08-19",
+    "as_of": "2026-08-24",
     "description": "Homes over 100 years old cannot bind until an underwriter reviews them. First and most common blocking alert. Per 100 age-alert-only quotes, ~63 die with nobody ever looking and ~16 bind.",
     "notes": [
       "Cohort layering assumes the same population applies after removal; alerts also deter bad risks, so every cost line here is a floor, not an estimate (Zero Alerts README s7).",
@@ -89,6 +89,14 @@
       "source": "Zero Alerts README s6b / ANALYSIS-2026-08-16.md: 92 / 1,223 bound (1.95x the reviewed book). Range = Byar approximate 95% CI.",
       "recipe": "same snapshot tables as reviewed_noe_per_100_bound_90d."
     },
+    "levers_addressable_share_of_noc_gap": {
+      "point": 0.76, "low": 0.55, "high": 0.90,
+      "unit": "share of the twin-minus-reviewed NOC gap the levers can address",
+      "status": "partial",
+      "confidence": "medium",
+      "source": "ANALYSIS-2026-08-16.md sub-reason table: Cond-General + Liability + Roof + Ineligible gaps sum to 1.48 of the 1.94 per-100 NOC gap (76%); these are the categories pre-fill, roof retargeting, and attestations can reach. Range is a hand bracket. Drives the after-the-levers scenario caveat.",
+      "recipe": "db 235: NOC sub-reason join tap_veruna.wt_insurance_policy__c.steadily_uw_cancellation_reason__c on the damr_uarnoe snapshots (data-recipes.md)."
+    },
     "foregone_uw_correction_premium_per_100_bound_usd": {
       "point": 3034,
       "unit": "USD per 100 bound policies",
@@ -111,27 +119,28 @@
       }
     },
     "noc": {
+      "cure_price_basis": "book",
       "cure_rate": {
         "point": 0.74,
         "unit": "share of NOCs that cure",
         "status": "measured",
-        "confidence": "medium",
-        "source": "scratch-darren 2026-08-noc-impact-inde-agent REPORT.md (Aug 18): 74% of NOCs cure.",
-        "recipe": "scratch-darren repo, tradeoff.py inputs."
+        "confidence": "high",
+        "source": "scratch-darren 2026-08-noc-impact-inde-agent REPORT.md v8 (2026-08-19): 74% of NOCs cure, stable 2024 to 2025. n=5,892 NOC'd policies from 2025H1 binds; cure = never UW-cancelled to date, net of reinstatement. NOTE the definition: the uar-noc-reasons project uses a different 5-day rule; do not net its cancel rates against this.",
+        "recipe": "scratch-darren repo, data/operating_point.csv + analysis/operating_point.py; tradeoff.py constant C0."
       },
       "cured_agent_book_loss_pct": {
         "point": 1.0, "low": 0.0, "high": 2.0,
-        "unit": "% of that agent's next-year binds, per cured NOC",
+        "unit": "% of that agent's next-year binds, per cured NOC (book basis)",
         "status": "partial",
         "confidence": "medium",
-        "source": "scratch-darren curves: a cured NOC costs roughly 0 to -2% of that agent's next-year binds per event. Point = midpoint of the published band."
+        "source": "scratch-darren v8 REPORT.md: 0 (book-level, undetectable at any observed dose) to -2.1% per event (within-agent panel, p<.001, 182,206 agent-months). This config uses the BOOK basis; point = midpoint of the band. Competing values in circulation: panel -2.1%/event, and Darren's emails use 3-7% (self-labeled directional) - the choice moves his 8/23 breakeven from ~12 to ~19-23 of 55 notices. See cure_price_basis."
       },
       "uncured_agent_book_loss_pct": {
         "point": 20.0,
-        "unit": "% of that agent's next-year binds, front-loaded on the first cancellation",
+        "unit": "% of that agent's next-year binds, per cancellation (dose reading)",
         "status": "partial",
-        "confidence": "low",
-        "source": "Darren's early data (LaNae 8/18 meeting + scratch-darren): first NOC that proceeds to cancellation ~ -20% future buys, front-loaded, hardest on small books; 3 NOCs = agent lost. Early data points, not published figures. v0 treats it as level per event, which overstates for multi-NOC agents."
+        "confidence": "medium",
+        "source": "scratch-darren v8 REPORT.md:38, a published ladder, not early data: agents whose book is 5-25% cancelled produce at 0.77-0.82 of matched controls (0.43 at 50% of book). The front-loading is in DOSE (the first meaningful cancellation does most of the damage), NOT in time: the monthly path is flat for 12+ months, a recurring annual flow while the relationship stays broken (REPORT.md:30,53,144). The within-agent per-event price is -3.0%/event (n=6,411). v0 treats -20% as level per event, which overstates agents with several NOCs."
       },
       "agent_next_year_binds": {
         "status": "unpriced",
@@ -166,6 +175,13 @@
         "confidence": "none",
         "sensitivity": [0, 25, 100],
         "source": "UNPRICED. The removed-coverage / bait-and-switch side (LaNae 8/18: NOC and NOE sit in the same category; the deal changed after close). Grid is illustrative."
+      },
+      "agent_book_loss_pct": {
+        "point": 1.3, "low": 0.4, "high": 4.8,
+        "unit": "% of that agent's next-year binds, per NOE event",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "scratch-darren v8 REPORT.md:110-117, the agent-side NOE price: an NOE on a policy that stays ok costs -0.4% (p=.66, not significant); an NOE on a policy later cancelled costs -4.8% (p=.009); blended ~ -1.3% of next-12m binds per event (vs -2.4% for a NOC event). Range = the ok/cancelled bracket, not a CI."
       }
     },
     "review": {

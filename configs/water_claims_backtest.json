@@ -105,6 +105,7 @@
         "actual": {
           "status": "unpriced",
           "unit": "NOCs and UW corrective endorsements per 100 bound, 90 days",
+          "denominator": "per 100 bound policies of the water-automation cohort, automated vs UW-reviewed lanes, first 90 days after bind",
           "confidence": "none",
           "source": "NEEDED, not yet readable: launch was Jul 15 and NOCs need ~90 days after bind to show up. First honest read ~mid Oct 2026.",
           "recipe": "db 235: rebuild the post-bind census recipe (dbt_dev.damr_uarnoe_* pattern) on the water cohort, automated vs UW-reviewed, once the window closes."

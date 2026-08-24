@@ -114,8 +114,19 @@ def render_html(ledger: Ledger, cfg: AlertConfig) -> str:
     parts.append('<div class="wrap">')
     parts.append("<h1>The Weighing Machine: %s</h1>" % _esc(L.alert_name))
     parts.append('<div class="sub">Direction: <strong>%s</strong> the alert &middot; '
-                 "scale %.2f &middot; inputs as of %s &middot; first pass (v0 "
-                 "reproduction)</div>" % (_esc(L.direction), L.scale, _esc(L.as_of)))
+                 "scale %.2f &middot; inputs as of %s</div>"
+                 % (_esc(L.direction), L.scale, _esc(L.as_of)))
+    method_bits = []
+    if L.estimator_label:
+        method_bits.append("Counts estimated via <strong>%s</strong>"
+                           % _esc(L.estimator_label))
+    if L.comparison:
+        method_bits.append(_esc(L.comparison))
+    if L.noc_cure_price_basis:
+        method_bits.append("cured-NOC price basis: <strong>%s</strong>"
+                           % _esc(L.noc_cure_price_basis))
+    if method_bits:
+        parts.append('<div class="sub small">%s</div>' % " &middot; ".join(method_bits))
 
     unpriced = L.unpriced()
     parts.append('<div class="banner"><strong>The machine cannot net this yet.</strong> '
@@ -128,14 +139,12 @@ def render_html(ledger: Ledger, cfg: AlertConfig) -> str:
     parts.append('<div class="card">%s</div>' % _ledger_table(L.counts(), decimals=0))
 
     if L.bind_to_noc_ratio is not None:
-        bar = ("tolerance bar: <strong>not set</strong> (LaNae has never been asked)"
-               if L.tolerance_bar is None
-               else "tolerance bar: <strong>%.1f binds per NOC</strong>" % L.tolerance_bar)
         parts.append('<div class="card"><div class="exch">Exchange rate: %s binds '
                      "bought per NOC added</div><div class='note'>gross and "
                      "un-weighted; the decision rule compares this against the "
                      "tolerance bar. %s</div></div>"
-                     % (_esc(L.bind_to_noc_ratio.fmt(1)), bar))
+                     % (_esc(L.bind_to_noc_ratio.fmt(1)),
+                        _esc(L.tolerance_verdict())))
 
     parts.append("<h2>Dollars, per month, where priced</h2>")
     parts.append('<div class="card">%s</div>'
@@ -149,10 +158,12 @@ def render_html(ledger: Ledger, cfg: AlertConfig) -> str:
                 % (_esc(r.label), _esc(format(r.value, ",.0f")), _esc(r.unit))
                 for r in blk.rows)
             note = ('<div class="note">%s</div>' % _esc(blk.notes)) if blk.notes else ""
+            flip = ('<div class="note"><strong>Flip point:</strong> %s</div>'
+                    % _esc(blk.flip)) if blk.flip else ""
             parts.append('<div class="card"><strong>%s</strong> '
                          '<span class="small">varies %s</span>%s'
-                         "<table>%s</table></div>"
-                         % (_esc(blk.title), _esc(blk.driver), note, rows))
+                         "<table>%s</table>%s</div>"
+                         % (_esc(blk.title), _esc(blk.driver), note, rows, flip))
 
     parts.append("<h2>Caveats</h2>")
     parts.append('<div class="card"><ul>%s</ul></div>'

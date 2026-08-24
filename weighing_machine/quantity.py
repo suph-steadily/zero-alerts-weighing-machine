@@ -146,8 +146,11 @@ class Quantity:
         if extra:
             raise ValueError("unknown Quantity fields %s on %r" % (sorted(extra), key))
         q = cls(**d)
-        if "_per_100" in key and not q.denominator:
-            # The "name your NOC denominator" rule, enforced at load time.
+        # The "name your NOC denominator" rule, enforced at load time.
+        # Keyed on the unit as well as the key name, so a rate cannot dodge
+        # the rule by being named something other than *_per_100*.
+        is_rate = "_per_100" in key or "per 100" in (q.unit or "").lower()
+        if is_rate and not q.denominator:
             raise ValueError("rate %r must name its denominator "
                              "(per 100 WHAT, over WHAT window)" % key)
         return q

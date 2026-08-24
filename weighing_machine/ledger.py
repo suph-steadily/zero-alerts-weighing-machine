@@ -55,6 +55,10 @@ class SensitivityBlock:
     driver: str                 # which UNPRICED weight this grid varies
     rows: List[SensitivityRow] = field(default_factory=list)
     notes: str = ""
+    # The flip point: the driver value at which the recommendation changes
+    # (priced subtotal crosses zero, or net bind gain hits zero). Plain words,
+    # computed by the model; empty when no flip exists.
+    flip: str = ""
 
 
 @dataclass
@@ -75,6 +79,10 @@ class Ledger:
     # population; printed so ledgers from different methods are never mixed up.
     estimator_label: str = ""
     comparison: str = ""
+    # which cured-NOC price the noc weights use ("book" or "panel"); printed
+    # so two ledgers on different cure prices are never quoted against each
+    # other (the gap moves Darren's breakeven from ~12 to ~19-23 of 55).
+    noc_cure_price_basis: str = ""
 
     # ------------------------------------------------------------- helpers
     def line(self, key: str) -> LedgerLine:
@@ -92,6 +100,22 @@ class Ledger:
     def unpriced(self) -> List[LedgerLine]:
         return [ln for ln in self.lines if not ln.quantity.is_priced]
 
+    def tolerance_verdict(self) -> str:
+        """The exchange rate against the tolerance bar, in plain words.
+        No bar -> NOT SET; with a bar -> PASS/FAIL at the point estimate,
+        flagged when the range straddles the bar."""
+        if self.tolerance_bar is None:
+            return "tolerance bar: NOT SET (never asked)"
+        r = self.bind_to_noc_ratio
+        if r is None or not r.is_priced:
+            return ("tolerance bar: %.1f (exchange rate not computable yet)"
+                    % self.tolerance_bar)
+        verdict = "PASS" if r.point >= self.tolerance_bar else "FAIL"
+        straddle = ("; the range straddles the bar, so the verdict is not settled"
+                    if r.lo < self.tolerance_bar <= r.hi else "")
+        return ("tolerance bar: %.1f binds per NOC -> %s at the point estimate "
+                "(%.1f)%s" % (self.tolerance_bar, verdict, r.point, straddle))
+
     # ---------------------------------------------------------------- text
     def to_text(self) -> str:
         w = 34
@@ -104,6 +128,11 @@ class Ledger:
             out.append("Counts estimated via: %s" % self.estimator_label)
         if self.comparison:
             out.append("Comparison: %s" % self.comparison)
+        if self.noc_cure_price_basis:
+            out.append("Cured-NOC price basis: %s (%s)"
+                       % (self.noc_cure_price_basis,
+                          "book-level scare curve, ~0" if self.noc_cure_price_basis == "book"
+                          else "within-agent panel, ~-2.1%/event"))
         out.append("")
         out.append("COUNTS, per month at this scale")
         for ln in self.counts():
@@ -128,9 +157,7 @@ class Ledger:
             out.append("")
             out.append("Exchange rate: %s binds bought per NOC added (gross)"
                        % self.bind_to_noc_ratio.fmt(1))
-            bar = ("tolerance bar: NOT SET (never asked)" if self.tolerance_bar is None
-                   else "tolerance bar: %.1f" % self.tolerance_bar)
-            out.append("  %s" % bar)
+            out.append("  %s" % self.tolerance_verdict())
         if self.sensitivities:
             out.append("")
             out.append("SENSITIVITY (unpriced weights, explicit what-ifs; not estimates)")
@@ -139,6 +166,8 @@ class Ledger:
                 for row in blk.rows:
                     out.append("    %-40s %s %s"
                                % (row.label, format(row.value, ",.1f"), row.unit))
+                if blk.flip:
+                    out.append("    -> flip point: %s" % blk.flip)
         if self.caveats:
             out.append("")
             out.append("CAVEATS")

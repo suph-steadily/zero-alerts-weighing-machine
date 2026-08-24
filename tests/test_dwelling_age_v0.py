@@ -123,7 +123,7 @@ class TestDwellingAgeV0(unittest.TestCase):
     # ------------------------------------------------------ unpriced honesty
     def test_unpriced_lines_never_carry_a_number(self):
         for key in ("gwp_new_binds", "noc_agent_attrition", "noe_cost",
-                    "loss_impact"):
+                    "noe_agent_attrition", "loss_impact"):
             q = self.ledger.line(key).quantity
             self.assertFalse(q.is_priced, key)
             self.assertIsNone(q.point, key)

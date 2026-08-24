@@ -38,13 +38,18 @@ from .quantity import PARTIAL, UNPRICED, Quantity
 
 
 def per_noc_agent_book_loss_pct(cfg: AlertConfig) -> Quantity:
-    """The NOC weight model, cure split (Darren's curves, scratch-darren Aug 18).
+    """The NOC weight model, cure split (scratch-darren v8 REPORT.md, 8/19).
 
-    74% of NOCs cure; a cured one costs ~0 to -2% of that agent's next-year
-    binds per event; an uncured cancellation costs ~20%, front-loaded.
-    v0 simplification, flagged: the -20% is treated as level per event
-    (front-loading and multi-NOC saturation ignored; overstates for agents
-    with several NOCs).
+    74% of NOCs cure. A cured NOC costs ~0 (book-level, undetectable) to
+    -2.1% of that agent's next-year binds per event (within-agent panel);
+    weights.noc.cure_price_basis names which basis the config's cured value
+    represents. An uncured cancellation costs ~20% of the relationship, and
+    the front-loading is in DOSE, not time: the first meaningful cancellation
+    does most of the damage (deepening to 25% of book adds little), while
+    over time the damage stays flat for 12+ months, a recurring annual flow
+    while the relationship stays broken. v0 simplification, flagged: the
+    -20% is treated as level per event, which overstates agents with
+    several NOCs.
     """
     cure = cfg.weight("noc", "cure_rate")
     cured = cfg.weight("noc", "cured_agent_book_loss_pct")
@@ -75,6 +80,8 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
     if cfg.mode != "weigh":
         raise ValueError("weigh() takes a weigh-mode config; "
                          "use backtest.score() for mode 'backtest'")
+    if tolerance_bar is None:
+        tolerance_bar = cfg.tolerance_bar   # config value; CLI flag overrides
 
     # Volume inputs (scale applies).
     B0 = cfg.count("current_binds_per_month").scaled(scale)
@@ -118,6 +125,9 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
     noe_exp = cfg.weight("noe", "experience_cost_usd")
     noe_relief = cfg.weight("noe", "customer_premium_relief_usd")
     loss_join = cfg.weight("loss", "loss_join_usd")
+    # Optional: the v8 agent-side NOE price (REPORT.md:110-117). NOEs also
+    # cost future binds from the issuing agent (~-1.3%/event blended).
+    noe_agent = cfg.weights.get("noe", {}).get("agent_book_loss_pct")
 
     lines = [
         LedgerLine(
@@ -180,6 +190,23 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
                   "actuarial backtest of the twin's on-book losses."),
     ]
 
+    # The agent-side NOE line, only when the config carries the v8 weight.
+    # Priced % x priced NOE count, then x agent book size and bind weight
+    # (both unpriced today), so the line stays honestly UNPRICED; the
+    # sensitivity block below shows it in binds.
+    if noe_agent is not None:
+        lines.insert(
+            len(lines) - 1,   # before the loss line
+            LedgerLine(
+                key="noe_agent_attrition", label="NOE cost, agent attrition",
+                kind=DOLLARS, good_when="down",
+                quantity=d_noe.mul(noe_agent).scaled(0.01)
+                              .mul(agent_binds).mul(bind_w).negate(),
+                notes="per NOE: %s%% of the issuing agent's next-year binds "
+                      "(v8 within-agent panel, ok/cancelled blended). Dollars "
+                      "need agent book size AND bind weight; see sensitivity."
+                      % noe_agent.fmt(1)))
+
     # Priced subtotal: only the dollar lines that actually carry a price.
     # Never the verdict while anything above is UNPRICED; the caveat says so.
     priced = [ln.quantity for ln in lines
@@ -199,7 +226,7 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
 
     # ---- exchange rate ---------------------------------------------------
     ratio = None
-    if d_noc.point and d_noc.point > 0:
+    if dB.is_priced and d_noc.is_priced and d_noc.point and d_noc.point > 0:
         ratio = Quantity(
             point=dB.point / d_noc.point,
             low=(dB.lo / d_noc.hi) if d_noc.hi > 0 else dB.lo / d_noc.point,
@@ -208,16 +235,32 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
             source="derived: binds gained / NOCs added (gross, un-weighted)")
 
     # ---- sensitivity grids (the UNPRICED toggles, never hidden) ----------
+    # Every block also names its flip point where one exists: the driver
+    # value at which the recommendation changes. Blocks render only when the
+    # counts they lean on are priced, so a config with unknown counts still
+    # loads and prints honest chips instead of crashing.
     sens = []
-    if bind_w.sensitivity:
+    subtotal_q = next((ln.quantity for ln in lines
+                       if ln.key == "priced_subtotal"), None)
+    if bind_w.sensitivity and dB.is_priced and dB.point:
         rows = [SensitivityRow(
             label="year-one premium $%s per bind" % format(v, ","),
             value=dB.point * v, unit="USD/mo GWP from new binds")
             for v in bind_w.sensitivity]
+        flip = ""
+        if subtotal_q is not None and subtotal_q.is_priced:
+            v_star = -subtotal_q.point / dB.point
+            if v_star > 0:
+                flip = ("the priced subtotal turns positive at ~$%s year-one "
+                        "premium per bind" % format(round(v_star), ","))
+            else:
+                flip = ("the priced subtotal is already positive before any "
+                        "bind value is counted")
         sens.append(SensitivityBlock(
             key="gwp", title="GWP from new binds", driver="bind.year1_premium_usd",
-            rows=rows, notes=bind_w.source))
-    if agent_binds.sensitivity:
+            rows=rows, notes=bind_w.source, flip=flip))
+    if (agent_binds.sensitivity and d_noc.is_priced and d_noc.point
+            and noc_pct.is_priced and dB.is_priced):
         rows = []
         for i, v in enumerate(agent_binds.sensitivity):
             lbl = (agent_binds.sensitivity_labels[i]
@@ -228,20 +271,57 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
                 label=lbl, value=lost,
                 unit="binds-equivalent/mo lost to agent attrition "
                      "(net bind gain %.0f)" % (dB.point - lost)))
+        flip = ""
+        per_noc_frac = noc_pct.point / 100.0
+        if per_noc_frac > 0:
+            v_star = dB.point / (d_noc.point * per_noc_frac)
+            flip = ("net bind gain hits zero at ~%.0f binds/agent/yr; every "
+                    "grid book size below that keeps the trade positive in "
+                    "counts" % v_star)
         sens.append(SensitivityBlock(
             key="noc_attrition", title="NOC agent attrition, in binds",
             driver="noc.agent_next_year_binds", rows=rows,
             notes="counts-denominated on purpose: comparable to the bind "
                   "gain without touching the unpriced bind weight. Assumes "
-                  "each NOC lands on a distinct agent; front-loading ignored."))
-    if noe_exp.sensitivity:
+                  "each NOC lands on a distinct agent; the dose "
+                  "front-loading (first cancellation does most damage) is "
+                  "ignored.", flip=flip))
+        if (noe_agent is not None and noe_agent.is_priced
+                and d_noe.is_priced and d_noe.point):
+            rows = []
+            for i, v in enumerate(agent_binds.sensitivity):
+                lbl = (agent_binds.sensitivity_labels[i]
+                       if i < len(agent_binds.sensitivity_labels)
+                       else "%s binds/agent/yr" % v)
+                lost = d_noe.point * (noe_agent.point / 100.0) * v
+                rows.append(SensitivityRow(
+                    label=lbl, value=lost,
+                    unit="binds-equivalent/mo lost to NOE agent attrition "
+                         "(net bind gain %.0f)" % (dB.point - lost)))
+            flip = ""
+            if noe_agent.point > 0:
+                v_star = dB.point / (d_noe.point * noe_agent.point / 100.0)
+                flip = ("net bind gain hits zero at ~%.0f binds/agent/yr on "
+                        "the NOE side alone" % v_star)
+            sens.append(SensitivityBlock(
+                key="noe_agent_attrition", title="NOE agent attrition, in binds",
+                driver="noc.agent_next_year_binds", rows=rows,
+                notes=noe_agent.source, flip=flip))
+    if noe_exp.sensitivity and d_noe.is_priced and d_noe.point:
         rows = [SensitivityRow(
             label="$%s experience cost per NOE" % format(v, ","),
             value=-d_noe.point * v, unit="USD/mo")
             for v in noe_exp.sensitivity]
+        flip = ""
+        if labor_saved.is_priced and labor_saved.point > 0:
+            v_star = labor_saved.point / d_noe.point
+            flip = ("no zero crossing (this line only subtracts); at ~$%s "
+                    "per NOE it alone would swallow the review-labor savings"
+                    % format(round(v_star), ","))
         sens.append(SensitivityBlock(
             key="noe_exp", title="NOE customer-experience cost",
-            driver="noe.experience_cost_usd", rows=rows, notes=noe_exp.source))
+            driver="noe.experience_cost_usd", rows=rows, notes=noe_exp.source,
+            flip=flip))
 
     # ---- caveats ---------------------------------------------------------
     caveats = list(cfg.notes)
@@ -251,6 +331,27 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
             "(%s per 100) the NOC line becomes %s per month. The headline "
             "uses the measured twin and is therefore a floor."
             % (floor.fmt(1), noc_floor.fmt(0, signed=True)))
+    # After-the-levers scenario: the automation-coverage input. If the
+    # levers (pre-fill, roof retargeting, attestations) duplicate the
+    # addressable share of the NOC gap, removal is weighed AFTER they land.
+    levers = cfg.counts.get("levers_addressable_share_of_noc_gap")
+    if (levers is not None and levers.is_priced
+            and d_noc.is_priced and d_noc.point is not None):
+        kept = Quantity(point=1 - levers.point,
+                        low=1 - levers.hi, high=1 - levers.lo,
+                        status=levers.status,
+                        source="derived (1 - addressable share)")
+        gap_after = noc_twin.sub(noc_rev).mul(kept)
+        rate_after = noc_rev.add(gap_after)
+        d_noc_after = (B0.mul(gap_after).scaled(0.01)
+                       .add(dB.mul(rate_after).scaled(0.01)))
+        caveats.append(
+            "After-the-levers scenario: if the levers duplicate the "
+            "addressable share of the NOC gap (%s of it), the NOC line "
+            "becomes %s per month instead of %s. Weigh removal after the "
+            "levers land, not instead of them."
+            % (levers.fmt(2), d_noc_after.fmt(1, signed=True),
+               d_noc.fmt(1, signed=True)))
     caveats.append(
         "Name your NOC denominator: every rate above is per 100 BOUND "
         "policies of this cohort, inspection-lane NOCs, first 90 days. "
@@ -275,7 +376,8 @@ def weigh(cfg: AlertConfig, scale: float = 1.0,
         as_of=cfg.as_of, scale=scale, lines=lines, sensitivities=sens,
         caveats=caveats, bind_to_noc_ratio=ratio, tolerance_bar=tolerance_bar,
         estimator_label=cfg.estimator_label,
-        comparison=cfg.estimator.get("comparison", ""))
+        comparison=cfg.estimator.get("comparison", ""),
+        noc_cure_price_basis=cfg.noc_cure_price_basis)
 
     # Direction "add": a proposed new alert is the mirror image, so every
     # delta flips sign (adding the gate loses the binds, saves the NOCs,

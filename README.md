@@ -13,7 +13,8 @@ python3 -m weighing_machine configs/dwelling_age.json -o examples/dwelling_age_r
 # top-7-states cut, or a 50% holdout (weigh only half the volume)
 python3 -m weighing_machine configs/dwelling_age.json --scale 0.93
 
-# once LaNae names her binds-per-NOC tolerance
+# once LaNae names her binds-per-NOC tolerance (or set alert.tolerance_bar
+# in the config); the ledger then prints PASS/FAIL instead of "NOT SET"
 python3 -m weighing_machine configs/dwelling_age.json --tolerance-bar 100
 
 # the water backtest: did the automation duplicate the underwriter?
@@ -28,7 +29,7 @@ Every config declares which of the five estimation methods produced its numbers 
 python3 -m unittest discover -s tests
 ```
 
-41 tests: the dwelling-age config must reproduce the published v0 ledger (+115 binds, +25 NOCs, +30 book-shift NOEs, -2,200 reviews, -$26K premium, loss unknown) within documented tolerances, plus sanity checks: ranges carry through the math, scaling works, and the add and remove directions mirror each other. The any-alert suite (`tests/test_any_alert.py`) covers the estimation-method declaration, the water backtest scorecard (4 held / 0 missed / 1 not yet readable), the mode guardrails, and the alert queue file.
+67 tests: the dwelling-age config must reproduce the published v0 ledger (+115 binds, +25 NOCs, +30 book-shift NOEs, -2,200 reviews, -$26K premium, loss unknown) within documented tolerances, plus sanity checks: ranges carry through the math, scaling works, and the add and remove directions mirror each other. The any-alert suite (`tests/test_any_alert.py`) covers the estimation-method declaration, the water backtest scorecard (4 held / 0 missed / 1 not yet readable), the mode guardrails, and the alert queue file. `tests/test_darren_napkin.py` reproduces Darren's 8/23 breakeven (22%, ~12 of 55 notices under his prices; ~19-23 of 55 under the measured curve prices). `tests/test_v1_features.py` covers the named cure price, the tolerance-bar PASS/FAIL, flip points, the v8 agent-side NOE weight, the after-the-levers scenario, and that a config with unknown counts still runs (chips, not crashes).
 
 ## Layout
 
@@ -45,9 +46,11 @@ python3 -m unittest discover -s tests
 
 ## What is stubbed / honest gaps
 
-- **Four weights are UNPRICED** (bind LTV (lifetime value), NOC customer side, NOE experience side, the loss join). They render as chips plus explicit sensitivity grids (what-if tables across plausible values); the illustrative grid values are placeholders, not estimates.
+- **Four weights are UNPRICED** (bind LTV (lifetime value), NOC customer side, NOE experience side, the loss join). They render as chips plus explicit sensitivity grids (what-if tables across plausible values); the illustrative grid values are placeholders, not estimates. Each grid now also names its flip point: the value at which the recommendation changes. See `INPUTS.md` for the full input ledger, every source, and the gap list with owners.
+- **The agent-side NOE price is now carried** (v8: ~-1.3% of the issuing agent's next-year binds per NOE, ok/cancelled blended) as `weights.noe.agent_book_loss_pct`, with its own attrition line and binds-denominated sensitivity block.
 - **Freed-review rate ($4.5-7.5/review)** is our division of the UW expense-model pool ($1.50/quote, $6.82/bound) by review volume; the division is an assumption and says so in the config.
-- **NOC weight simplifications**: the -20% uncured cost is treated as level per event (really most of it lands early), and each NOC is assumed to land on a distinct agent.
+- **NOC weight simplifications**: the -20% uncured cost is treated as level per event, and each NOC is assumed to land on a distinct agent. In the source (scratch-darren v8) the front-loading is in DOSE, not time: the first meaningful cancellation does most of the damage (deepening to 25% of book adds little), while over time the damage stays flat for 12+ months, a recurring annual flow while the relationship stays broken. Level-per-event therefore overstates agents with several NOCs.
+- **Two cured-NOC prices exist** (book-level ~0 vs within-agent panel -2.1%/event; Darren's emails use 3-7%). Every config names which one it uses (`weights.noc.cure_price_basis`), the same way a rate names its denominator.
 - **v0 NOE convention**: the published +30 counted only the existing book's rate shift; the machine reports that component (for v0 comparability) and the coherent total (~+40) that includes new-bind NOEs.
 - **No queries**: the machine encodes structure; numbers enter through the config files by hand, each with its source and recipe named.
 - **The backtest verdicts are recorded, not computed**: each claim's held/missed comes from the analysis that measured it; the loader only enforces honesty (an unreadable number can never claim "held"). A later pass could auto-judge claims where prediction and actual are both numeric.
