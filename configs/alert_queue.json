@@ -27,7 +27,7 @@
       "uw_action_mix": "partial: approve 77.0% / reject 8.0% on single-alert quotes; action detail not pulled",
       "post_bind_outcomes": "unknown",
       "levers": "the roof score model exists (same dial as dwelling age)",
-      "status": "good candidate for config #3: the lever already exists"
+      "status": "config #3 skeleton built 2026-08-24 (configs/roof_condition.json): touches + shared weights + boundary method named; funnel and post-bind counts UNPRICED until the boundary cohort is pulled"
     },
     {
       "alert_family": "Coverage A threshold",

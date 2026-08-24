@@ -1,0 +1,176 @@
+{
+  "_comment": "Config #3: the roof condition alert, intake pass 2026-08-24. Filled with what is already on disk (roof-dial RESULTS-2026-08-20.md, the UW touches census, shared weights); the funnel and post-bind counts are honestly UNPRICED until the boundary cohort is pulled (COHORT-PICKER.md names the method and the traps). The machine runs on this config today and prints chips, not guesses.",
+
+  "alert": {
+    "id": "ROOF_CONDITION",
+    "name": "Roof condition manual review",
+    "direction": "remove",
+    "as_of": "2026-08-24",
+    "description": "Quotes whose roof model score trips the alert cannot bind until an underwriter reviews the roof. Third-largest alert family by UW touches (1,156/mo). The auto roof-surfacing-exclusion model is the live lever: today it covers 5.5% of the exclusion work UWs do on bound 101+ NB (59 of 1,077, May 1-Aug 15), and the review-lane roof job did NOT shrink after the April launch (23.9% to 26.4% of approvals).",
+    "notes": [
+      "Boundary traps (data-recipes.md, roof-dial facts): 'exclude' spans scores 1-97, so the live decision is NOT a pure score cut; scores only exist on binds from April 2026 onward; model versions coexist (v1.2.0 dominant) - pin or stratify.",
+      "Aperture curve, if the auto-exclusion dial widens (RESULTS-2026-08-20.md): bar 80 = 60.7% capture at 1.10 unwanted exclusions per caught home (~195 over-applies/mo); bar 83 = 54.7% / 0.95; bar 85 = 50.7% / 0.83. Today's setting caught 0 of 106 roof-cancelled homes, including all 12 scoring 95+; Texas has 0 auto-applies since the May 11 launch.",
+      "The roof lever has the first loss number anywhere: ~83% of expected roof-peril dollars unpaid on excluded homes, ~$52 avoided paid loss per excluded home-year, hand-picked roofs only (LOSS-JOIN-2026-08-21.md, branch worktree-roof-loss-join). That prices the LEVER, not this alert."
+    ]
+  },
+
+  "estimator": {
+    "method": "boundary",
+    "comparison": "quotes scoring just under the roof alert cutoff vs just over, April 2026 onward (the score-coverage window), model version pinned or stratified; state-matched for any removal sizing, never pooled",
+    "notes": "NOT PULLED YET. The band definition and window come from COHORT-PICKER.md; the decision column is not a pure score cut, so the boundary must be built on the score, not the decision."
+  },
+
+  "counts": {
+    "forced_reviews_per_month": {
+      "point": 1156,
+      "unit": "reviews/mo",
+      "status": "measured",
+      "confidence": "medium",
+      "source": "UW touches census (Jan-Jun 2026): 1,156 referral reviews/mo carry the roof condition family. Multi-alert submissions count toward each family, so removal frees FEWER than all of these (some reviews survive because another alert also fires); the single-family share is the intake pull.",
+      "recipe": "db 235: 'UW touches per alert family' (data-recipes.md, verified 8/2): eventstore referral submissions joined to dbt.ipod_smga_uw_alerts_per_quote_version at the submitted version, family-tagged."
+    },
+    "current_binds_per_month": {
+      "status": "unpriced",
+      "unit": "bound policies/mo, roof-alert-only cohort",
+      "confidence": "none",
+      "source": "NOT PULLED. The roof-alert-only bound cohort (intake checklist item 1); same funnel query as the touches census, bind = quote_issued_timestamp."
+    },
+    "binds_gained_per_month": {
+      "status": "unpriced",
+      "unit": "bound policies/mo",
+      "confidence": "none",
+      "source": "NOT PULLED. Needs the boundary cohort's bind-rate gap, state-matched (COHORT-PICKER.md; the MB 141815 move)."
+    },
+    "reviewed_noc_per_100_bound_90d": {
+      "status": "unpriced",
+      "unit": "NOCs per 100 bound",
+      "denominator": "per 100 bound policies of the reviewed roof-alert cohort, inspection-lane NOCs, first 90 days after bind",
+      "confidence": "none",
+      "source": "NOT PULLED. Census pattern on the reviewed roof cohort; roof NOC sub-reason string is exactly 'Condition - Roof' (data-recipes.md)."
+    },
+    "twin_noc_per_100_bound_90d": {
+      "status": "unpriced",
+      "unit": "NOCs per 100 bound",
+      "denominator": "per 100 bound policies of the just-under-score boundary cohort, inspection-lane NOCs, first 90 days after bind",
+      "confidence": "none",
+      "source": "NOT PULLED. Same census pattern on the boundary cohort."
+    },
+    "reviewed_noe_per_100_bound_90d": {
+      "status": "unpriced",
+      "unit": "UW corrective NOEs per 100 bound",
+      "denominator": "per 100 bound policies of the reviewed roof-alert cohort, UW-initiated corrective endorsements, first 90 days",
+      "confidence": "none",
+      "source": "NOT PULLED. Roof-add NOE = evdetail e_col='roof_surfacing_exclusion' e_prev='' e_cur='selected'; never filter by ev_class alone (9 roof-adds carry attribute_correction)."
+    },
+    "twin_noe_per_100_bound_90d": {
+      "status": "unpriced",
+      "unit": "UW corrective NOEs per 100 bound",
+      "denominator": "per 100 bound policies of the just-under-score boundary cohort, UW-initiated corrective endorsements, first 90 days",
+      "confidence": "none",
+      "source": "NOT PULLED. Same pattern on the boundary cohort."
+    },
+    "foregone_uw_correction_premium_per_100_bound_usd": {
+      "status": "unpriced",
+      "unit": "USD per 100 bound policies",
+      "denominator": "per 100 bound policies, bound-only premium added by UW corrections on roof referrals",
+      "confidence": "none",
+      "source": "NOT PULLED. The only per-alert weight (REQUIREMENTS.md); rebuild the premium join on the roof cohort. Values in damr_prem_flags-style tables are in CENTS."
+    }
+  },
+
+  "weights": {
+    "_comment": "Shared, book-wide weights, copied from config #1 (REQUIREMENTS.md: weights are priced once; only the correction premium is per-alert).",
+    "bind": {
+      "year1_premium_usd": {
+        "status": "unpriced",
+        "unit": "USD per bind, year one",
+        "confidence": "none",
+        "sensitivity": [1000, 1500, 2000, 2500],
+        "source": "UNPRICED. Shared weight; the finance/actuarial ask (INPUTS.md gap 1). Grid is an illustrative placeholder."
+      }
+    },
+    "noc": {
+      "cure_price_basis": "book",
+      "cure_rate": {
+        "point": 0.74,
+        "unit": "share of NOCs that cure",
+        "status": "measured",
+        "confidence": "high",
+        "source": "scratch-darren v8 REPORT.md (2026-08-19): 74% cure, stable 2024 to 2025, n=5,892. Book-wide weight, shared across alerts.",
+        "recipe": "scratch-darren data/operating_point.csv; tradeoff.py constant C0."
+      },
+      "cured_agent_book_loss_pct": {
+        "point": 1.0, "low": 0.0, "high": 2.0,
+        "unit": "% of that agent's next-year binds, per cured NOC (book basis)",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "scratch-darren v8: 0 (book-level) to -2.1%/event (panel). Book basis, midpoint. See config #1 for the competing values."
+      },
+      "uncured_agent_book_loss_pct": {
+        "point": 20.0,
+        "unit": "% of that agent's next-year binds, per cancellation (dose reading)",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "scratch-darren v8 REPORT.md:38 published ladder. Dose-front-loaded, time-flat 12+ months. Level-per-event simplification overstates multi-NOC agents (see config #1)."
+      },
+      "agent_next_year_binds": {
+        "status": "unpriced",
+        "unit": "binds per agent per year",
+        "confidence": "none",
+        "sensitivity": [5, 15, 40],
+        "sensitivity_labels": [
+          "small book, 5 binds/yr",
+          "median-ish book, 15 binds/yr",
+          "large book, 40 binds/yr"
+        ],
+        "source": "UNPRICED. Shared weight; the cheapest unpriced pull (INPUTS.md gap 5)."
+      },
+      "customer_side_usd": {
+        "status": "unpriced",
+        "unit": "USD per NOC, customer side",
+        "confidence": "none",
+        "source": "UNPRICED. Shared weight (INPUTS.md gap 3; refunds average ~-$1,300/event is the seed)."
+      }
+    },
+    "noe": {
+      "customer_premium_relief_usd": {
+        "point": 0,
+        "unit": "USD premium relief per NOE",
+        "status": "measured",
+        "confidence": "high",
+        "source": "ANALYSIS-2026-08-16.md: UW corrective NOEs are premium-neutral (~$0 relief). Shared weight; roof NOEs are mostly exclusion adds, same family."
+      },
+      "experience_cost_usd": {
+        "status": "unpriced",
+        "unit": "USD per NOE, experience side",
+        "confidence": "none",
+        "sensitivity": [0, 25, 100],
+        "source": "UNPRICED. Shared weight; the removed-coverage side. Grid is illustrative."
+      },
+      "agent_book_loss_pct": {
+        "point": 1.3, "low": 0.4, "high": 4.8,
+        "unit": "% of that agent's next-year binds, per NOE event",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "scratch-darren v8 REPORT.md:110-117: ok -0.4% (n.s.) / cancelled -4.8% (p=.009), blended ~-1.3%/event. Shared weight."
+      }
+    },
+    "review": {
+      "labor_usd_per_review": {
+        "point": 6.0, "low": 4.5, "high": 7.5,
+        "unit": "USD per forced review",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "Shared weight: UW expense-model anchors ($1.50/quote, $6.82/bound) divided by review volume; the division is ours (see config #1 and INPUTS.md gap 4)."
+      }
+    },
+    "loss": {
+      "loss_join_usd": {
+        "status": "unpriced",
+        "unit": "USD per month, loss impact",
+        "confidence": "none",
+        "source": "UNPRICED for the alert. The roof LEVER has a measured loss read (~$52 avoided paid loss per excluded home-year, hand-picked roofs, branch worktree-roof-loss-join) - do not multiply it by a wider-bar catch count; the wider bar catches different roofs."
+      }
+    }
+  }
+}
