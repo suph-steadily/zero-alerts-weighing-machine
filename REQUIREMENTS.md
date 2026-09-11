@@ -1,6 +1,6 @@
 # The Weighing Machine: Requirements (first pass)
 
-Part of Zero Alerts (`alert-north-star/README.md`, section 3). The framing of record: What Must Be True v4 (`appendix/what-must-be-true.html`).
+Part of Zero Alerts (`https://github.com/suph-steadily/zero-alerts/blob/main/README.md`, section 3). The framing of record: What Must Be True v4 (`https://github.com/suph-steadily/zero-alerts/blob/main/appendix/what-must-be-true.html`).
 
 **This machine is for ANY alert.** Dwelling age is config #1 (the worked example). Water claims is config #2 (the backtest: a case we already lived through, used to prove the machine's honesty). The alert queue below is who goes next. One config format, one loader, one report; a new alert is a new JSON file (a plain text file of inputs), not new code.
 
@@ -42,7 +42,7 @@ Two halves: 6 COUNTS (forecast what removal changes) and 6 WEIGHTS (convert coun
 | A corrective NOE | ~$0 premium relief to the customer (measured); removed-coverage experience side not | half priced | ANALYSIS-2026-08-16.md; DEEPDIVE catch-count 6.8% vs 3.3% |
 | A freed review | UW labor per forced review | partial | UW expense model anchors: $1.50/quote, $6.82/bound; our pool-to-review division gives $4.5-7.5/review, flagged as an assumption |
 | Premium from UW corrections | bound-only premium their fixes add | measured ($26K/mo for dwelling age) | `damr_prem_flags_20260807` (values in CENTS); $3,034 per 100 bound, ~0% recovered at renewal |
-| The loss join | actual losses tied back to the alert's population | MISSING for the alert; measured for the roof LEVER on branch `worktree-roof-loss-join` (LOSS-JOIN-2026-08-21.md: ~83% of expected roof-peril dollars unpaid on excluded homes, ~$52 avoided paid loss per excluded home-year, hand-picked roofs only) | plan for the alert: an actuarial backtest of the twin's on-book losses (What Must Be True v4, section 5). Data trap for whoever goes next: `dbt.claims_smga` is a monthly CUMULATIVE snapshot; dedupe latest per claim_id or inflate ~12x |
+| The loss join | actual losses tied back to the alert's population | MISSING for the alert; measured for the roof LEVER on roof repo branch `loss-join` ([LOSS-JOIN-2026-08-21.md](https://github.com/suph-steadily/zero-alerts-roof/blob/loss-join/LOSS-JOIN-2026-08-21.md): ~83% of expected roof-peril dollars unpaid on excluded homes, ~$52 avoided paid loss per excluded home-year, hand-picked roofs only) | plan for the alert: an actuarial backtest of the twin's on-book losses (What Must Be True v4, section 5). Data trap for whoever goes next: `dbt.claims_smga` is a monthly CUMULATIVE snapshot; dedupe latest per claim_id or inflate ~12x |
 
 ## Outputs: the ledger
 

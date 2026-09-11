@@ -1,5 +1,5 @@
 {
-  "_comment": "Weighing machine v0 worked example: the dwelling-age 101+ manual-review alert, priced for removal. Every value carries source + confidence + range. Sources: Zero Alerts README (alert-north-star/README.md), What Must Be True v4 (appendix/what-must-be-true.html), ~/mockups/damr-postbind-uarnoe/{ANALYSIS,DEEPDIVE}-2026-08-16.md, Two Houses artifact 443f560b, scratch-darren 2026-08-noc-impact-inde-agent. Recipes: consult-the-book data-recipes.md, Metabase db 235.",
+  "_comment": "Weighing machine v0 worked example: the dwelling-age 101+ manual-review alert, priced for removal. Every value carries source + confidence + range. Sources: Zero Alerts README (https://github.com/suph-steadily/zero-alerts/blob/main/README.md), What Must Be True v4 (https://github.com/suph-steadily/zero-alerts/blob/main/appendix/what-must-be-true.html), ~/mockups/damr-postbind-uarnoe/{ANALYSIS,DEEPDIVE}-2026-08-16.md, Two Houses artifact 443f560b, scratch-darren 2026-08-noc-impact-inde-agent. Recipes: consult-the-book data-recipes.md, Metabase db 235.",
 
   "alert": {
     "id": "DWELLING_AGE_101_PLUS",

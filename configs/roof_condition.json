@@ -10,7 +10,7 @@
     "notes": [
       "Boundary traps (data-recipes.md, roof-dial facts): 'exclude' spans scores 1-97, so the live decision is NOT a pure score cut; scores only exist on binds from April 2026 onward; model versions coexist (v1.2.0 dominant) - pin or stratify.",
       "Aperture curve, if the auto-exclusion dial widens (RESULTS-2026-08-20.md): bar 80 = 60.7% capture at 1.10 unwanted exclusions per caught home (~195 over-applies/mo); bar 83 = 54.7% / 0.95; bar 85 = 50.7% / 0.83. Today's setting caught 0 of 106 roof-cancelled homes, including all 12 scoring 95+; Texas has 0 auto-applies since the May 11 launch.",
-      "The roof lever has the first loss number anywhere: ~83% of expected roof-peril dollars unpaid on excluded homes, ~$52 avoided paid loss per excluded home-year, hand-picked roofs only (LOSS-JOIN-2026-08-21.md, branch worktree-roof-loss-join). That prices the LEVER, not this alert."
+      "The roof lever has the first loss number anywhere: ~83% of expected roof-peril dollars unpaid on excluded homes, ~$52 avoided paid loss per excluded home-year, hand-picked roofs only (https://github.com/suph-steadily/zero-alerts-roof/blob/loss-join/LOSS-JOIN-2026-08-21.md, roof repo branch loss-join). That prices the LEVER, not this alert."
     ]
   },
 
@@ -169,7 +169,7 @@
         "status": "unpriced",
         "unit": "USD per month, loss impact",
         "confidence": "none",
-        "source": "UNPRICED for the alert. The roof LEVER has a measured loss read (~$52 avoided paid loss per excluded home-year, hand-picked roofs, branch worktree-roof-loss-join) - do not multiply it by a wider-bar catch count; the wider bar catches different roofs."
+        "source": "UNPRICED for the alert. The roof LEVER has a measured loss read (~$52 avoided paid loss per excluded home-year, hand-picked roofs, roof repo branch loss-join: https://github.com/suph-steadily/zero-alerts-roof/blob/loss-join/LOSS-JOIN-2026-08-21.md) - do not multiply it by a wider-bar catch count; the wider bar catches different roofs."
       }
     }
   }

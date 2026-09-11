@@ -5,7 +5,7 @@ A standardized way to price whether an underwriting alert should be removed
 reviews. Counts first, dollars where a weight exists, UNPRICED chips where
 one does not.
 
-Part of the Zero Alerts project (alert-north-star/README.md s3).
+Part of the Zero Alerts project (https://github.com/suph-steadily/zero-alerts/blob/main/README.md s3).
 Reference seed: tradeoff.py in scratch-darren. Stdlib only.
 
 Usage:
