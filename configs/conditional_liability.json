@@ -1,0 +1,203 @@
+{
+  "_comment": "Config #4: conditional liability exclusions (DISCO-755), priced 2026-08-28 for Suph's discovery. THE SCENARIO: the 14 filed no-signature exclusion forms (7 liability hazards: pools, hot tubs, pool accessories, trampolines, window bars, slides/playgrounds, dangerous animals) attach to every policy at bind. Two halves of the trade, both in this one 'remove' ledger: (1) the exclusion-acknowledgement UAR -> NOC lane stops firing (twin NOC rate = mechanical zero, so the NOC line goes NEGATIVE = NOCs avoided), and (2) the pre-bind hazard referral alerts (POOL_CONDITION, BARRED_WINDOWS, TRAMPOLINE_PRESENCE, AIT_* hazard variants) stop blocking (binds gained + reviews freed). Fresh db-235 pulls this run (2026-08-28) reproduce the sibling refresh (NOC-SIZING-REFRESH-2026-08-28.md) to within 1 policy: 869 vs 868 lane true-NOCs last 5 complete months; 57.7% vs 58% rescinded; 31.1% vs 31% confirmed cancelled.",
+
+  "alert": {
+    "id": "CONDITIONAL_LIABILITY_ACK_LANE",
+    "name": "Exclusion-acknowledgement lane (7 liability hazards) replaced by no-signature conditional exclusion forms",
+    "direction": "remove",
+    "as_of": "2026-08-28",
+    "description": "Today: an inspection finds a hazard (pool, trampoline, window bars, hot tub, animal...), the landlord gets a sign-this-exclusion UAR, and non-signers get NOC'd (~174 policies/mo true-NOC, 16.6% of all true NOCs, 11.1% floor; ~116/mo of those NOCs are signature-ONLY notices; only ~33% of eligible policies acknowledge). Pre-bind, the same hazards block ~817 NB quotes/mo behind a mandatory UW review (~250/mo have the hazard as their ONLY blocker; they bind at 14.1% vs the ~17.7% clean-funnel yardstick). Proposed: the filed conditional exclusion forms attach to every policy at bind with no signature, killing both the signature chase and the pre-bind hazard referral.",
+    "notes": [
+      "This is NOT a normal alert removal: NOCs go DOWN, not up. The machine's exchange rate (binds bought per NOC added) is undefined by construction - there is no NOC price to pay, so any tolerance bar (LaNae's floated 100:1 included) is passed trivially. Both halves are wins; the open questions are about how much of each win survives contact with reality.",
+      "GATE 1 (from the book, business-logic.md): enforceability - Bryan's open legal comment in the Exclusions Overview + Trisura 8/25 unanswered. If the no-signature form does not hold up at claim time, the NOC-avoidance win survives but the loss-protection rationale collapses.",
+      "GATE 2: LaNae's every-state signature rule vs the no-signature design (-SI variants; IL confirmed, scope ambiguous). If a signature is still demanded anywhere, that state's chase lane keeps firing.",
+      "POOL_CONDITION is 80% of the pre-bind hazard volume and its predicate semantics are UNVERIFIED: if it fires on pool DISREPAIR (not pool presence), UW may keep it for property reasons and the bind half shrinks toward the low end.",
+      "The measured after-world evidence: 3,115 NB policies (12mo) carry one of the 4 hazard exclusion columns, and 59% of them STILL got a signature-chase UAR (24% true-NOC'd) - today's design chases signatures even when the exclusion is already attached. That is the machinery this change deletes.",
+      "December 2025 was a spike month (396 lane UARs vs ~250 average) - looks like an inspection-backlog campaign; TTM and last-5-months bases both quoted.",
+      "Unpriced small wins not in the counts: ~160 signed acknowledgements/mo + ~5 exclusion-via-NOE/mo of post-bind paperwork disappear; the post-bind chase labor (~250 UARs + ~174 NOCs + ~100 rescissions per month of UW/ops touches) is not in the freed-review line, which counts pre-bind reviews only."
+    ]
+  },
+
+  "estimator": {
+    "method": "sister_cohort",
+    "comparison": "NOC half: measured split of today's lane NOCs - 578/868 signature-only (die by construction under the no-signature design) vs 290/868 mixed-notice (other items on the same notice can still NOC; carried as the after rate). Bind half: hazard-alert-ONLY NB quotes (no other blocking alert, n=2,998/12mo, bind 14.1%) against the otherwise-clean funnel yardstick from the dwelling-age work (17.7% state-matched counterfactual, MB 141815 pattern; 18.0% pooled clean; 15.7% pooled twin as the low).",
+    "notes": "The bind-half twin is BORROWED from the dwelling-age funnel-twin work, not pulled for hazard quotes specifically; the state-matched hazard twin (same MB 141815 move on this cohort) is the follow-up pull. The NOC half needs no cohort - it is a design fact - but the residual-knock share does need a real read (NOC reason detail on the 868, or ask UW)."
+  },
+
+  "counts": {
+    "forced_reviews_per_month": {
+      "point": 90, "low": 55, "high": 250,
+      "unit": "pre-bind reviews/mo",
+      "status": "partial",
+      "confidence": "low",
+      "source": "OUR DIVISION, flagged: 250 hazard-only NB quotes/mo (measured union of the 7 hazard alert ids, quotes with no other blocking alert, Aug 2025-Jul 2026) x ~37% reviewed-share borrowed from the dwelling-age funnel (63% die with nobody looking). High end = every hazard-only quote reviewed. Reviews on the other ~567/mo multi-alert hazard quotes get shorter, not freed - not counted.",
+      "recipe": "db 235: dbt.ipod_smga_uw_alerts_per_quote_version, alert_id IN (POOL_CONDITION, BARRED_WINDOWS, TRAMPOLINE_PRESENCE, AIT_BARRED_WINDOWS, AIT_BARRED_BOARDED_WINDOWS, AIT_POOL_CONDITION, AIT_GENERAL_LIABILITY_HAZARD), NB, per-quote max(requires_uw_review) on other alert ids = the hazard-only cut. Real touches number = the eventstore underwriting_review_note join ('UW touches per alert family', data-recipes.md:400) - not rebuilt this pass."
+    },
+    "current_binds_per_month": {
+      "point": 10712, "low": 10400, "high": 11000,
+      "unit": "bound NB policies/mo, company-wide",
+      "status": "measured",
+      "confidence": "high",
+      "source": "MEASURED this run: 128,550 distinct NB policy numbers issued Aug 2025-Jul 2026 (12 complete months) = 10,712/mo. Matches the book's verified ~10.5k bound/mo. The whole NB book is the cohort because the forms attach to every policy and the acknowledgement lane draws from the whole book (overwhelmingly NB in their first inspection months).",
+      "recipe": "db 235: dbt.ipod_standard_mga_raw_policy_info, first_quote_type='NewBusiness', policy_issued_timestamp in window, uniqExact(user_visible_policy_number). Table is multi-row per policy (versions/dwellings) - raw count() runs 2.3x hot."
+    },
+    "binds_gained_per_month": {
+      "point": 9, "low": 2, "high": 16,
+      "unit": "bound policies/mo",
+      "status": "partial",
+      "confidence": "low",
+      "source": "250/mo hazard-only quotes x (17.7% clean-funnel yardstick - 14.1% measured hazard-only bind rate) = +9/mo. Low end: pooled-twin yardstick 15.7% and/or UW keeps most POOL_CONDITION referrals. High end: 18% yardstick + some relief on multi-alert quotes. NOT state-matched for hazard quotes yet - the honest range is wide.",
+      "recipe": "db 235: same per-quote hazard-alert pull; bind = quote_issued_timestamp IS NOT NULL (union 9,800 quotes / 1,268 bound; hazard-only 2,998 / 424 bound, 12 complete months). Yardstick: funnel-twin recipe, data-recipes.md 2026-08-13 + 8/19 recut (MB 141815)."
+    },
+    "reviewed_noc_per_100_bound_90d": {
+      "point": 1.62, "low": 1.28, "high": 2.12,
+      "unit": "true NOCs per 100 bound",
+      "denominator": "per 100 bound NB policies company-wide per month; exclusion-acknowledgement-lane TRUE NOCs (card 140996 definition: UAR sent, not signed/cured within 5 days), counted whenever they land (in practice the first ~90 days, inspection-driven). NOT the inspection-lane all-cause rate and NOT Darren's 11.7% book-wide figure.",
+      "status": "measured",
+      "confidence": "high",
+      "source": "MEASURED this run: last 5 complete months (Mar-Jul 2026) 869 lane true-NOC policies = 173.8/mo / 10,712 NB binds/mo = 1.62 per 100. Low = TTM average (1,642/yr = 136.8/mo = 1.28). High = April 2026 peak (227 = 2.12). Reproduces NOC-SIZING-REFRESH-2026-08-28.md (868/5mo, ~174/mo) to within 1 policy. Lane = 16.6% of all true NOCs (868/5,214); 11.1% floor counting only NOCs where the signature ask was the only problem (refresh). The old 22.75% (671/2,949, Christine's Apr 2026 sheet) was inflated by the pre-July-2026 co-fire bug.",
+      "recipe": "db 235: dbt_mga.mga_uw_action_required_events, base_event_name='underwriting_action_requested', reason_types contains 'Acknowledgement' AND any of (Trampoline, Hot Tub, Swimming Pool, Barred, Animal) - the Robotnik card 36215/36250 predicate - with card 140996's true-NOC normalization; policy grain (uniqExact insurance_policy_number)."
+    },
+    "twin_noc_per_100_bound_90d": {
+      "point": 0.54, "low": 0.0, "high": 0.65,
+      "unit": "true NOCs per 100 bound",
+      "denominator": "per 100 bound NB policies company-wide per month; lane NOCs that SURVIVE the no-signature design = mixed-notice NOCs whose non-signature items (roof, debris...) still go unresolved. Failure-to-sign NOCs are zero by construction.",
+      "status": "partial",
+      "confidence": "medium",
+      "source": "MEASURED SPLIT, conservative point: of the 868 lane true-NOCs (Mar-Jul 2026), 578 (67%) were signature-ONLY notices - those NOCs die with certainty - and 290 (33%, ~58/mo = 0.54 per 100) carried other problems on the same notice that can still NOC (NOC-SIZING-REFRESH-2026-08-28.md, the 11.1% floor construction). Point = ALL mixed-notice NOCs persist (the floor of the win); low 0 = they all clear once the hard part (the signature) is gone; high 0.65 adds a small hand residual for hazards UW refuses even excluded. Reverse-causality trap: the exclusion-at-bind cohort CANNOT serve as this twin (59% of it still got signature-chased; the column also flips 'yes' after a post-UAR endorsement).",
+      "recipe": "Refresh's floor construction on db 268/235: lane true-NOC policies whose notice reason set is entirely within the 5 acknowledgement hazards vs mixed. Sharper read when wanted: resolution detail on the 290 mixed policies."
+    },
+    "reviewed_noe_per_100_bound_90d": {
+      "point": 0, "low": 0, "high": 0,
+      "unit": "UW corrective NOEs per 100 bound",
+      "denominator": "per 100 bound NB policies; UW corrective NOEs ATTRIBUTABLE TO THIS LANE (exclusion-add endorsements after a signed acknowledgement), deliberately held at zero on both sides",
+      "status": "partial",
+      "confidence": "low",
+      "source": "NOT MODELED, conservative: the lane's endorsement paperwork (~160 signed acknowledgements/mo + ~5 exclusion-via-NOE/mo, sibling refresh funnel 807 + 26 per 5 months) disappears under auto-attach - a small unpriced WIN we hold at zero rather than guess. UW corrective NOEs for other reasons are untouched by this change.",
+      "recipe": "n/a (held at zero; see source)"
+    },
+    "twin_noe_per_100_bound_90d": {
+      "point": 0, "low": 0, "high": 0,
+      "unit": "UW corrective NOEs per 100 bound",
+      "denominator": "per 100 bound NB policies; same lane-scoped convention as reviewed_noe (zero by construction after auto-attach)",
+      "status": "partial",
+      "confidence": "low",
+      "source": "Zero by construction: the form is on every policy from bind, so no post-bind exclusion-add endorsement exists for these hazards.",
+      "recipe": "n/a"
+    },
+    "foregone_uw_correction_premium_per_100_bound_usd": {
+      "status": "unpriced",
+      "unit": "USD per 100 bound policies",
+      "denominator": "per 100 bound policies, bound-only premium added by UW corrections on hazard referrals",
+      "confidence": "none",
+      "source": "UNPRICED. Nobody has pulled whether UW corrections on hazard referrals add premium (the dwelling-age $3,034/100 does NOT transfer - different review job). The exclusion forms themselves are premium-neutral as filed (no rate credit anywhere in the filing docs per the book), so the likely value is small; left unpriced rather than guessed.",
+      "recipe": "When wanted: rebuild the damr_prem_flags premium join (values in CENTS) on the hazard-referral cohort."
+    }
+  },
+
+  "weights": {
+    "_comment": "Shared book-wide weights copied from config #1 (REQUIREMENTS.md: weights priced once), except cure_rate, which is LANE-SPECIFIC and measured.",
+    "bind": {
+      "year1_premium_usd": {
+        "status": "unpriced",
+        "unit": "USD per bind, year one",
+        "confidence": "none",
+        "sensitivity": [1000, 1500, 2000, 2500],
+        "source": "UNPRICED. Shared weight; finance/actuarial ask (INPUTS.md gap 1). Anchors on disk: avg NB premium $1,568 / median $1,381. Grid is an illustrative placeholder."
+      }
+    },
+    "noc": {
+      "cure_price_basis": "book",
+      "cure_rate": {
+        "point": 0.67, "low": 0.58, "high": 0.72,
+        "unit": "share of lane NOCs that cure (never end in confirmed cancellation)",
+        "status": "measured",
+        "confidence": "medium",
+        "source": "LANE-SPECIFIC, measured this run: of true-NOC'd lane policies, 57.7% later rescind and 31.1% end in confirmed UW cancellation (mature months Aug 2025-Apr 2026: 391 cancelled / 1,204 NOC'd = 32.5% -> cure 67.5%). Matches NOC-SIZING-REFRESH-2026-08-28.md (58% rescinded / 31% cancelled). Low 0.58 = only rescissions counted as cures; high 0.72 = recent months' read. Book-wide v8 figure is 74% - this lane cures slightly less.",
+        "recipe": "db 235: same lane pull, min_occurred_at_cancellation_underwriting_success / min_occurred_at_cancellation_rescinded on true-NOC policies."
+      },
+      "cured_agent_book_loss_pct": {
+        "point": 1.0, "low": 0.0, "high": 2.0,
+        "unit": "% of that agent's next-year binds, per cured NOC (book basis)",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "scratch-darren v8: 0 (book-level) to -2.1%/event (panel). Book basis, midpoint, same as configs #1/#3. Competing values: panel -2.1%/event; Darren's emails 3-7% (kickoff 8/28 quotes 'rescinded = -3-7%' from that same email range). Because NOCs are AVOIDED here, a higher cured price makes the win BIGGER, not smaller - the book basis is the conservative choice."
+      },
+      "uncured_agent_book_loss_pct": {
+        "point": 20.0,
+        "unit": "% of that agent's next-year binds, per cancellation (dose reading)",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "scratch-darren v8 REPORT.md:38 published ladder (kickoff 8/28: non-rescinded NOC = -20% of that agent's future production, front-loaded in dose). Level-per-event simplification overstates multi-NOC agents; on the avoidance side that OVERSTATES the win - flagged in the memo."
+      },
+      "agent_next_year_binds": {
+        "status": "unpriced",
+        "unit": "binds per agent per year",
+        "confidence": "none",
+        "sensitivity": [5, 15, 40],
+        "sensitivity_labels": [
+          "small book, 5 binds/yr",
+          "median-ish book, 15 binds/yr",
+          "large book, 40 binds/yr"
+        ],
+        "source": "UNPRICED. Shared weight; the cheapest unpriced pull (INPUTS.md gap 5; v8's own files imply ~3.2 binds/agent/yr mean). Darren's napkin: one uncured NOC = ~7 future policies = ~$12K; ~3 loses the agent (kickoff 8/28)."
+      },
+      "customer_side_usd": {
+        "status": "unpriced",
+        "unit": "USD per NOC, customer side",
+        "confidence": "none",
+        "source": "UNPRICED. Shared weight (INPUTS.md gap 3; refunds average ~-$1,300/event is the seed). On the avoidance side this is MORE win, unpriced."
+      }
+    },
+    "noe": {
+      "customer_premium_relief_usd": {
+        "point": 0,
+        "unit": "USD premium relief per NOE",
+        "status": "measured",
+        "confidence": "high",
+        "source": "Shared weight (ANALYSIS-2026-08-16.md): UW corrective NOEs are premium-neutral. Moot here - the NOE delta is held at zero."
+      },
+      "experience_cost_usd": {
+        "status": "unpriced",
+        "unit": "USD per NOE, experience side",
+        "confidence": "none",
+        "sensitivity": [0, 25, 100],
+        "source": "UNPRICED shared weight. Moot here (NOE delta zero), kept for format completeness."
+      },
+      "agent_book_loss_pct": {
+        "point": 1.3, "low": 0.4, "high": 4.8,
+        "unit": "% of that agent's next-year binds, per NOE event",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "Shared v8 weight (ok -0.4% n.s. / cancelled -4.8% p=.009, blended ~-1.3%/event). Moot here (NOE delta zero)."
+      }
+    },
+    "review": {
+      "labor_usd_per_review": {
+        "point": 6.0, "low": 4.5, "high": 7.5,
+        "unit": "USD per forced review",
+        "status": "partial",
+        "confidence": "medium",
+        "source": "Shared weight: UW expense-model anchors ($1.50/quote, $6.82/bound) divided by review volume; the division is ours (config #1, INPUTS.md gap 4). NOTE: prices pre-bind reviews only; the post-bind chase labor this change also deletes (~250 UARs + ~174 NOCs + ~100 rescissions/mo of touches) is an unpriced extra win."
+      }
+    },
+    "loss": {
+      "loss_join_usd": {
+        "status": "unpriced",
+        "unit": "USD per month, loss impact",
+        "confidence": "none",
+        "source": "UNPRICED, and for THIS change it cuts the other way from most removals: attaching liability exclusions to every policy should REDUCE paid liability losses (a win), but the awareness exception ('did not know or should not reasonably have known') plus the open enforceability question (Bryan's comment, Trisura 8/25) could void it at claim time. Canopius claim scenarios exist in the Exclusions Overview doc; no dollar figure anywhere. The claims join recipe exists (dbt.claims_smga, dedupe latest per claim_id, join dwelling_id) if actuarial wants the backtest."
+      }
+    }
+  },
+
+  "validation": {
+    "_comment": "Reconciliation targets, this run (2026-08-28, db 235) vs NOC-SIZING-REFRESH-2026-08-28.md: lane true-NOC policies last 5 complete months 869 vs 868; rescinded-after-NOC 57.7% vs 58.1%; confirmed-cancelled 31.1% vs 30.5%; ~174/mo NOC pace agreed. Expected ledger at point: NOCs -116/mo (signature-only certain kill; range ~[-233..-67], best case all 174 die, worst case mixed-notice NOCs persist plus residual), binds +9/mo [2..16], reviews -90/mo, priced subtotal = review labor only ~ +$540/mo. Exchange rate: not computable (NOC delta is negative) - passes any binds-per-NOC bar by construction.",
+    "expected_ledger": {
+      "binds_per_month": {"point": 9, "low": 2, "high": 16},
+      "nocs_per_month": {"point": -116},
+      "forced_reviews_per_month": {"point": -90},
+      "loss_impact": "unknown"
+    }
+  }
+}
